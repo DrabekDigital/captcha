@@ -1,0 +1,35 @@
+{block content}
+<div class="container">
+    <h1>Contact Us</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            {control contactForm}
+        </div>
+        <div class="col-md-4">
+            <div class="alert alert-info">
+                <h5>Get in Touch</h5>
+                <p>Feel free to contact us using the form. We'll get back to you as soon as possible!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{* Include captcha JavaScript - this is important! *}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic('turnstile')|noescape}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic('hcaptcha')|noescape}
+
+{* Alternative manual approach: *}
+{* 
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+*}
+{/block}
+
+{* Include form validation and managed state messages handler *}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getLocalJavascriptStatic()|noescape}
+
+{* Alternative manual approach: *}
+{* 
+    <script src="{$basePath}/assets/captcha-validation.js"></script>
+*}

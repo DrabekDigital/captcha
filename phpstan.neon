@@ -1,0 +1,69 @@
+includes:
+    - vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
+    - vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon
+    - vendor/spaze/phpstan-disallowed-calls-nette/disallowed-dangerous-calls.neon
+
+parameters:
+    level: max
+    exceptions:
+        checkedExceptionClasses:
+            - Kiwicom\Loopbind\Exceptions\CheckedException
+        check:
+            missingCheckedExceptionInThrows: true
+    ignoreErrors:
+        # Ignore extension method addCaptcha that is dynamically added by DI extension
+        - '#Call to an undefined method Nette\\Forms\\Form::addCaptcha\(\)#'
+    disallowedFunctionCalls:
+        -
+            function: 'sizeof()'
+            message: 'use count() instead.'
+        -
+            function: 'delete()'
+            message: 'use unset() instead.'
+        -
+            function: 'substr()'
+            message: 'use mb_substr() instead'
+        -
+            function: 'substr_count()'
+            message: 'use mb_substr_count() instead'
+        -
+            function: 'strtoupper()'
+            message: 'use mb_strtoupper() instead'
+        -
+            function: 'strtolower()'
+            message: 'use mb_strtolower() instead'
+        -
+            function: 'strstr()'
+            message: 'use mb_strstr() instead'
+        -
+            function: 'strrpos()'
+            message: 'use mb_strrpos() instead'
+        -
+            function: 'strripos()'
+            message: 'use mb_strripos() instead'
+        -
+            function: 'strrchr()'
+            message: 'use mb_strrchr() instead'
+        -
+            function: 'strpos()'
+            message: 'use mb_strpos() instead'
+        -
+            function: 'strlen()'
+            message: 'use mb_strlen() instead'
+        -
+            function: 'stristr()'
+            message: 'use mb_stristr() instead'
+        -
+            function: 'stripos()'
+            message: 'use mb_stripos() instead'
+        -
+            function: 'str_split()'
+            message: 'use mb_str_split() instead'
+    disallowedConstants:
+        -
+            constant: 'DATE_ISO8601'
+            message: 'use DATE_ATOM instead'
+        -
+            class: 'DateTimeInterface'
+            constant: 'ISO8601'
+            message: 'use DateTimeInterface::ATOM instead'

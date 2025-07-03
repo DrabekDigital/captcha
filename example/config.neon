@@ -1,0 +1,28 @@
+# Example configuration for Nette Captcha Extension
+
+extensions:
+    captcha: DrabekDigital\Captcha\DI\CaptchaExtension
+
+# Cloudflare Turnstile configuration
+captcha:
+    type: turnstile
+    # For testing keys for Turnstiles see https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+    secretKey: 1x00000000000000000000BB                         # Replace with your secret key
+    siteKey: 1x0000000000000000000000000000000AA                # Replace with your site key
+    theme: auto    # light, dark, or auto
+    size: normal   # normal or compact
+
+# Alternative: hCaptcha configuration
+# captcha:
+#     type: hcaptcha
+#     secretKey: your-hcaptcha-secret-key
+#     siteKey: your-hcaptcha-site-key
+#     theme: light
+#     size: normal
+
+# Custom verification URL (optional)
+# captcha:
+#     type: turnstile
+#     secretKey: your-secret-key
+#     siteKey: your-site-key
+#     verifyUrl: https://custom-verification-endpoint.com/verify 
