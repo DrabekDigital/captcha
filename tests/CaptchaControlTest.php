@@ -75,7 +75,7 @@ class CaptchaControlTest extends TestCase
                         $this->httpData = $httpData;
                     }
                     
-                    public function getHttpData(?int $type = null, ?string $htmlName = null): \Nette\Http\FileUpload|array|string|null // @phpstan-ignore-line
+                    public function getHttpData(?int $type = null, ?string $htmlName = null) /*\Nette\Http\FileUpload|array|string|null*/
                     {
                         return $this->httpData;
                     }
@@ -135,6 +135,9 @@ class CaptchaControlTest extends TestCase
 
     public function testSetRequiredWithStringableMessage(): void
     {
+        if (PHP_VERSION_ID < 80000) {
+            self::markTestSkipped('Stringable messages are not supported in PHP 7.4');
+        }
         $control = new CaptchaControl($this->validator);
         $stringable = new class() implements Stringable {
             public function __toString(): string
@@ -373,7 +376,7 @@ class CaptchaControlTest extends TestCase
             public function getForm(bool $throw = true): ?Form // @phpstan-ignore-line
             {
                 return new class() extends Form {
-                    public function getHttpData(?int $type = null, ?string $htmlName = null): \Nette\Http\FileUpload|array|string|null // @phpstan-ignore-line
+                    public function getHttpData(?int $type = null, ?string $htmlName = null) /*\Nette\Http\FileUpload|array|string|null*/
                     {
                         return 'invalid-data'; // Non-array data
                     }

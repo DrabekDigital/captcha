@@ -6,7 +6,6 @@ namespace DrabekDigital\Captcha;
 
 use Nette\Forms\Controls\BaseControl;
 use Nette\Forms\Form;
-use Nette\HtmlStringable;
 use Nette\Utils\Html;
 use Stringable;
 
@@ -78,16 +77,16 @@ class CaptchaControl extends BaseControl
     /**
      * Set if captcha is required
      *
-     * @param string|\Stringable|bool $required
+     * @param string|\Stringable|Html|object|bool $value
      * @return static
      */
-    public function setRequired(/*string|Stringable|bool*/ $required = true): static
+    public function setRequired(/*string|Stringable|Html|object|bool*/ $value = true)
     {
-        if (is_string($required) || $required instanceof Stringable) {
+        if (is_string($value) || $value instanceof Stringable || $value instanceof Html) {
             $this->required = true;
-            $this->message = $required;
-        } elseif (is_bool($required)) { // @phpstan-ignore-line
-            $this->required = $required;
+            $this->message = $value;
+        } elseif (is_bool($value)) {
+            $this->required = $value;
         } else {
             $this->required = true;
         }
@@ -103,20 +102,20 @@ class CaptchaControl extends BaseControl
     /**
      * Set message to be shown when the managed captcha is rendered as invisible
      *
-     * @param string|HtmlStringable $messagePending
-     * @param string|HtmlStringable $messageResolved
+     * @param string|Html $messagePending
+     * @param string|Html $messageResolved
      * @return static
      */
-    public function setManagedMessages(/*string|HtmlStringable*/ $messagePending, /*string|HtmlStringable*/ $messageResolved): self
+    public function setManagedMessages(/*string|Html*/ $messagePending, /*string|Html*/ $messageResolved): self
     {
         if ($this->type === 'hcaptcha') {
             throw new \InvalidArgumentException('hCaptcha integration does not support managed mode');
         }
-        // validate type of $messagePending and $messageResolved to be string or HtmlStringable
-        if (!is_string($messagePending) && !($messagePending instanceof HtmlStringable)) { // @phpstan-ignore-line
+        // validate type of $messagePending and $messageResolved to be string or Html
+        if (!is_string($messagePending) && !($messagePending instanceof Html)) { // @phpstan-ignore-line
             throw new \InvalidArgumentException('Message must be an instance of string or HtmlStringable');
         }
-        if (!is_string($messageResolved) && !($messageResolved instanceof HtmlStringable)) { // @phpstan-ignore-line
+        if (!is_string($messageResolved) && !($messageResolved instanceof Html)) { // @phpstan-ignore-line
             throw new \InvalidArgumentException('Message must be an instance of string or HtmlStringable');
         }
 
@@ -151,7 +150,7 @@ class CaptchaControl extends BaseControl
     public static function validateCaptcha(self $control): bool
     {
         $form = $control->getForm();
-        if (!$form instanceof Form) { // @phpstan-ignore-line
+        if (!$form instanceof Form) {
             return false;
         }
 
@@ -174,9 +173,12 @@ class CaptchaControl extends BaseControl
         }
     }
 
-    private function getMessage(): string
+    private function getMessage(bool $stripHtml = false): string
     {
-        if ($this->message instanceof HtmlStringable || $this->message instanceof Stringable) {
+        if ($stripHtml && $this->message instanceof Html) {
+            return strip_tags($this->message->__toString());
+        }
+        if ($this->message instanceof Stringable || $this->message instanceof Html) {
             return $this->message->__toString();
         }
         $fallbackMessage = $this->translate('Please verify you are human.');
@@ -224,7 +226,7 @@ class CaptchaControl extends BaseControl
                     'data-sitekey' => $this->siteKey,
                     'data-theme' => $this->theme,
                     'data-size' => $this->size,
-                    'data-require-turnstile' => $this->getMessage(),
+                    'data-require-turnstile' => $this->getMessage(true),
                 ]);
                 break;
                 
@@ -234,7 +236,7 @@ class CaptchaControl extends BaseControl
                     'data-sitekey' => $this->siteKey,
                     'data-theme' => $this->theme,
                     'data-size' => $this->size,
-                    'data-require-hcaptcha' => $this->getMessage(),
+                    'data-require-hcaptcha' => $this->getMessage(true),
                 ]);
                 break;
         }
@@ -245,14 +247,14 @@ class CaptchaControl extends BaseControl
                 'class' => 'captcha-managed-invisible-message-pending',
                 'style' => 'display: none;',
             ]);
-            $el2->setText($this->translate($this->managedMessagePending));
+            $el2->setText($this->translate($this->managedMessagePending)); // @phpstan-ignore-line
 
             $el3 = Html::el('div');
             $el3->addAttributes([
                 'class' => 'captcha-managed-invisible-message-resolved',
                 'style' => 'display: none;',
             ]);
-            $el3->setText($this->translate($this->managedMessageResolved));
+            $el3->setText($this->translate($this->managedMessageResolved)); // @phpstan-ignore-line
 
             $elWrapper->addHtml($el2);
             $elWrapper->addHtml($el3);
@@ -275,7 +277,7 @@ class CaptchaControl extends BaseControl
         }
 
         $form = $this->getForm();
-        if (!$form instanceof Form) { // @phpstan-ignore-line
+        if (!$form instanceof Form) {
             return false;
         }
 
@@ -297,7 +299,7 @@ class CaptchaControl extends BaseControl
     public function getValue(): ?string
     {
         $form = $this->getForm();
-        if (!$form instanceof Form) { // @phpstan-ignore-line
+        if (!$form instanceof Form) {
             return null;
         }
 

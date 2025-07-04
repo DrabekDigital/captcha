@@ -14,9 +14,11 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 ## Requirements
 
-- **PHP**: 7.4 or higher
-- **Nette Framework**: 3.0+
+- **PHP**: 7.4, 8.0, 8.1, 8.2
+- **Nette Framework**: 3.0+ (limited by Nette forms 3.1 as max version)
 - **Extensions**: `curl` or `allow_url_fopen` for server-side verification
+
+
 
 ## Installation
 

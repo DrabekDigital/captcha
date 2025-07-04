@@ -27,7 +27,6 @@ class CaptchaExtensionTest extends TestCase
         $compiler->addExtension('captcha', new CaptchaExtension());
         $compiler->addConfig($config);
         $temp = $compiler->setClassName($containerClassName);
-        //file_put_contents(__DIR__ . '/temp.php', $temp->compile());
         eval($temp->compile()); // @phpstan-ignore-line
 
         /** @var Container $container */
@@ -298,6 +297,8 @@ class CaptchaExtensionTest extends TestCase
         // Check if initialize method has the expected code
         $initializeMethod = $classType->getMethod('initialize');
         $body = $initializeMethod->getBody();
+
+        self::assertNotNull($body); // @phpstan-ignore-line
         
         self::assertStringContainsString('addCaptcha', $body);
         self::assertStringContainsString(CaptchaValidator::class, $body);
