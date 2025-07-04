@@ -212,6 +212,9 @@ class CaptchaExtensionTest extends TestCase
         self::assertInstanceOf(CaptchaValidator::class, $validator); // @phpstan-ignore-line
     }
 
+    /**
+     * @runInSeparateProcess
+     */
     public function testAfterCompileAddsExtensionMethod(): void
     {
         $config = [
@@ -239,6 +242,9 @@ class CaptchaExtensionTest extends TestCase
         self::assertEquals('captcha', $control->getName());
     }
 
+    /**
+     * @runInSeparateProcess
+     */
     public function testAfterCompileWithHcaptchaConfiguration(): void
     {
         $config = [
@@ -309,6 +315,9 @@ class CaptchaExtensionTest extends TestCase
         self::assertStringContainsString('setSize', $body);
     }
 
+    /**
+     * @runInSeparateProcess
+     */
     public function testExtensionMethodRegistration(): void
     {
         // Test that the extension method is properly registered
@@ -335,6 +344,9 @@ class CaptchaExtensionTest extends TestCase
         self::assertEquals('Custom Label', $control2->getCaption());
     }
 
+    /**
+     * @runInSeparateProcess
+     */
     public function testValidatorServiceInjection(): void
     {
         $config = [
