@@ -16,8 +16,8 @@
 </div>
 
 {* Include captcha JavaScript - this is important! *}
-{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic('turnstile')|noescape}
-{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic('hcaptcha')|noescape}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::TURNSTILE)|noescape}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::HCAPTCHA)|noescape}
 
 {* Alternative manual approach: *}
 {* 

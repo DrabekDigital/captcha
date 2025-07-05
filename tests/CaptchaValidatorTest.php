@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DrabekDigital\Captcha\Tests;
 
 use DrabekDigital\Captcha\CaptchaValidator;
+use DrabekDigital\Captcha\Enums\CaptchaType;
 use Nette\Http\IRequest;
 use PHPUnit\Framework\TestCase;
 
@@ -23,7 +24,7 @@ class CaptchaValidatorTest extends TestCase
         $httpRequest = $this->createMock(IRequest::class);
         $validator = new CaptchaValidator(
             'secret-key',
-            'hcaptcha',
+            CaptchaType::HCAPTCHA,
             'https://custom-verify-url.com',
             $httpRequest
         );
@@ -37,40 +38,13 @@ class CaptchaValidatorTest extends TestCase
         self::assertFalse($result);
     }
 
-    public function testVerifyWithInvalidType(): void
-    {
-        $validator = new CaptchaValidator($this->validSecretKey, 'invalid-type');
-        
-        // Test with empty response first - should return false without network call
-        $result = $validator->verify('');
-        self::assertFalse($result);
-        
-        // Alternatively, we can test the type validation by checking the verify URL
-        $reflection = new \ReflectionClass($validator);
-        $method = $reflection->getMethod('getVerifyUrl');
-        $method->setAccessible(true);
-        
-        // Invalid type should return null or empty string for verify URL
-        $verifyUrl = $method->invoke($validator);
-        self::assertNull($verifyUrl);
-    }
-
-    public function testSetHttpRequest(): void
-    {
-        $validator = new CaptchaValidator($this->validSecretKey);
-        $httpRequest = $this->createMock(IRequest::class);
-        
-        $result = $validator->setHttpRequest($httpRequest);
-        self::assertSame($validator, $result); // Test fluent interface
-    }
-
     public function testVerifyWithMockedHttpRequest(): void
     {
         // Create a mock HTTP request
         $httpRequest = $this->createMock(IRequest::class);
         $httpRequest->method('getRemoteAddress')->willReturn('127.0.0.1');
 
-        $validator = new CaptchaValidator($this->validSecretKey, 'turnstile', null, $httpRequest);
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, $httpRequest);
         
         // Only test with empty response to avoid network calls
         $result = $validator->verify('');
@@ -81,7 +55,7 @@ class CaptchaValidatorTest extends TestCase
     {
         $validator = new CaptchaValidator(
             $this->validSecretKey,
-            'turnstile',
+            CaptchaType::TURNSTILE,
             'https://custom-verify-url.com'
         );
         
@@ -104,7 +78,7 @@ class CaptchaValidatorTest extends TestCase
      */
     public function testGetVerifyUrlForTurnstile(): void
     {
-        $validator = new CaptchaValidator($this->validSecretKey, 'turnstile');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE);
         
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
@@ -120,7 +94,7 @@ class CaptchaValidatorTest extends TestCase
      */
     public function testGetVerifyUrlForHcaptcha(): void
     {
-        $validator = new CaptchaValidator($this->validSecretKey, 'hcaptcha');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::HCAPTCHA);
         
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
@@ -137,7 +111,7 @@ class CaptchaValidatorTest extends TestCase
     public function testGetVerifyUrlWithCustomUrl(): void
     {
         $customUrl = 'https://example.com/verify';
-        $validator = new CaptchaValidator($this->validSecretKey, 'turnstile', $customUrl);
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, $customUrl);
         
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
@@ -195,7 +169,7 @@ class CaptchaValidatorTest extends TestCase
         $httpRequest = $this->createMock(IRequest::class);
         $httpRequest->method('getRemoteAddress')->willReturn('10.0.0.1');
         
-        $validator = new CaptchaValidator($this->validSecretKey, 'turnstile', null, $httpRequest);
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, $httpRequest);
         
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);

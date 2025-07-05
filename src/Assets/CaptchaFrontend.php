@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrabekDigital\Captcha\Assets;
 
+use DrabekDigital\Captcha\Enums\CaptchaType;
 use Nette\StaticClass;
 
 class CaptchaFrontend
@@ -13,21 +14,15 @@ class CaptchaFrontend
     /**
      * Get JavaScript code for loading captcha based on explicit request
      *
-     * @param string $type
+     * @param CaptchaType $type
      * @return string
      */
-    public static function getJavascriptStatic(string $type): string
+    public static function getJavascriptStatic(CaptchaType $type): string
     {
-        switch ($type) {
-            case 'turnstile':
-                return '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
-
-            case 'hcaptcha':
-                return '<script src="https://js.hcaptcha.com/1/api.js" async defer></script>';
-
-            default:
-                return '';
-        }
+        return match ($type) {
+            CaptchaType::TURNSTILE => '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>',
+            CaptchaType::HCAPTCHA => '<script src="https://js.hcaptcha.com/1/api.js" async defer></script>',
+        };
     }
 
     /**

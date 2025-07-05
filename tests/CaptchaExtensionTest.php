@@ -9,9 +9,9 @@ use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\DI\CaptchaExtension;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
-use Nette\DI\ContainerLoader;
 use Nette\Forms\Form;
 use Nette\PhpGenerator\ClassType;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 class CaptchaExtensionTest extends TestCase
@@ -65,15 +65,15 @@ class CaptchaExtensionTest extends TestCase
             self::assertEquals('compact', $normalized['size']);
         } else {
             self::assertInstanceOf(\stdClass::class, $normalized);
-            self::assertObjectHasAttribute('type', $normalized);
+            self::assertObjectHasProperty('type', $normalized);
             self::assertEquals('turnstile', $normalized->type);
-            self::assertObjectHasAttribute('secretKey', $normalized);
+            self::assertObjectHasProperty('secretKey', $normalized);
             self::assertEquals('test-secret', $normalized->secretKey);
-            self::assertObjectHasAttribute('siteKey', $normalized);
+            self::assertObjectHasProperty('siteKey', $normalized);
             self::assertEquals('test-site', $normalized->siteKey);
-            self::assertObjectHasAttribute('theme', $normalized);
+            self::assertObjectHasProperty('theme', $normalized);
             self::assertEquals('dark', $normalized->theme);
-            self::assertObjectHasAttribute('size', $normalized);
+            self::assertObjectHasProperty('size', $normalized);
             self::assertEquals('compact', $normalized->size);
         }
     }
@@ -212,9 +212,7 @@ class CaptchaExtensionTest extends TestCase
         self::assertInstanceOf(CaptchaValidator::class, $validator); // @phpstan-ignore-line
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+    #[RunInSeparateProcess]
     public function testAfterCompileAddsExtensionMethod(): void
     {
         $config = [
@@ -242,9 +240,7 @@ class CaptchaExtensionTest extends TestCase
         self::assertEquals('captcha', $control->getName());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+    #[RunInSeparateProcess]
     public function testAfterCompileWithHcaptchaConfiguration(): void
     {
         $config = [
@@ -315,9 +311,7 @@ class CaptchaExtensionTest extends TestCase
         self::assertStringContainsString('setSize', $body);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+    #[RunInSeparateProcess]
     public function testExtensionMethodRegistration(): void
     {
         // Test that the extension method is properly registered
@@ -344,9 +338,7 @@ class CaptchaExtensionTest extends TestCase
         self::assertEquals('Custom Label', $control2->getCaption());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+    #[RunInSeparateProcess]
     public function testValidatorServiceInjection(): void
     {
         $config = [
@@ -378,9 +370,7 @@ class CaptchaExtensionTest extends TestCase
         self::assertSame($validator, $controlValidator);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+    #[RunInSeparateProcess]
     public function testCompleteIntegration(): void
     {
         $config = [
@@ -418,9 +408,7 @@ class CaptchaExtensionTest extends TestCase
         self::assertStringContainsString('data-size="compact"', $rendered);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+    #[RunInSeparateProcess]
     public function testExtensionMethodRegistrationAlternative(): void
     {
         // Test that the extension properly registers the method by checking the afterCompile method

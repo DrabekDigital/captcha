@@ -6,6 +6,9 @@ namespace DrabekDigital\Captcha\Tests;
 
 use DrabekDigital\Captcha\CaptchaControl;
 use DrabekDigital\Captcha\CaptchaValidator;
+use DrabekDigital\Captcha\Enums\CaptchaType;
+use DrabekDigital\Captcha\Enums\Size;
+use DrabekDigital\Captcha\Enums\Theme;
 use Nette\Forms\Form;
 use Nette\Utils\Html;
 use PHPUnit\Framework\TestCase;
@@ -44,10 +47,10 @@ class CaptchaControlTest extends TestCase
      * Helper method to create a testable control that doesn't need real forms
      *
      * @param array<string, mixed> $httpData
-     * @param string $type
+     * @param CaptchaType $type
      * @return CaptchaControl
      */
-    private function createTestableControl(array $httpData, string $type = 'turnstile'): CaptchaControl
+    private function createTestableControl(array $httpData, CaptchaType $type = CaptchaType::TURNSTILE): CaptchaControl
     {
         // Ensure both captcha response keys are always present
         $completeData = array_merge([
@@ -58,7 +61,7 @@ class CaptchaControlTest extends TestCase
         return new class($this->validator, null, $this->siteKey, $type, $completeData) extends CaptchaControl {
             private array $mockHttpData; // @phpstan-ignore-line
             
-            public function __construct(CaptchaValidator $validator, ?string $label, string $siteKey, string $type, array $mockHttpData) // @phpstan-ignore-line
+            public function __construct(CaptchaValidator $validator, ?string $label, string $siteKey, CaptchaType $type, array $mockHttpData) // @phpstan-ignore-line
             {
                 parent::__construct($validator, $label, $siteKey, $type);
                 $this->mockHttpData = $mockHttpData;
@@ -75,7 +78,7 @@ class CaptchaControlTest extends TestCase
                         $this->httpData = $httpData;
                     }
                     
-                    public function getHttpData(?int $type = null, ?string $htmlName = null) /*\Nette\Http\FileUpload|array|string|null*/
+                    public function getHttpData(?int $type = null, ?string $htmlName = null): \Nette\Http\FileUpload|array|string|null // @phpstan-ignore-line
                     {
                         return $this->httpData;
                     }
@@ -93,21 +96,21 @@ class CaptchaControlTest extends TestCase
 
     public function testConstructorWithAllParameters(): void
     {
-        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, 'hcaptcha');
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::HCAPTCHA);
         self::assertInstanceOf(CaptchaControl::class, $control); // @phpstan-ignore-line
     }
 
     public function testSetThemeFluentInterface(): void
     {
         $control = new CaptchaControl($this->validator);
-        $result = $control->setTheme('dark');
+        $result = $control->setTheme(Theme::DARK);
         self::assertSame($control, $result);
     }
 
     public function testSetSizeFluentInterface(): void
     {
         $control = new CaptchaControl($this->validator);
-        $result = $control->setSize('compact');
+        $result = $control->setSize(Size::COMPACT);
         self::assertSame($control, $result);
     }
 
@@ -135,9 +138,6 @@ class CaptchaControlTest extends TestCase
 
     public function testSetRequiredWithStringableMessage(): void
     {
-        if (PHP_VERSION_ID < 80000) {
-            self::markTestSkipped('Stringable messages are not supported in PHP 7.4');
-        }
         $control = new CaptchaControl($this->validator);
         $stringable = new class() implements Stringable {
             public function __toString(): string
@@ -152,7 +152,7 @@ class CaptchaControlTest extends TestCase
 
     public function testSetManagedMessagesWithTurnstile(): void
     {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'turnstile');
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE);
         $result = $control->setManagedMessages('Pending', 'Resolved');
         self::assertSame($control, $result);
         self::assertStringContainsString('Pending', $control->getControl()->render());
@@ -161,7 +161,7 @@ class CaptchaControlTest extends TestCase
 
     public function testSetManagedMessagesWithHtmlStringable(): void
     {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'turnstile');
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE);
         $html = Html::el('em')->setText('HTML message');
         $result = $control->setManagedMessages($html, 'Resolved');
         self::assertSame($control, $result);
@@ -171,7 +171,7 @@ class CaptchaControlTest extends TestCase
 
     public function testSetManagedMessagesWithHcaptchaThrowsException(): void
     {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'hcaptcha');
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
         
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('hCaptcha integration does not support managed mode');
@@ -179,36 +179,16 @@ class CaptchaControlTest extends TestCase
         $control->setManagedMessages('Pending', 'Resolved');
     }
 
-    public function testSetManagedMessagesWithInvalidPendingMessageType(): void
-    {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'turnstile');
-        
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Message must be an instance of string or HtmlStringable');
-        
-        $control->setManagedMessages(123, 'Resolved'); // @phpstan-ignore-line
-    }
-
-    public function testSetManagedMessagesWithInvalidResolvedMessageType(): void
-    {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'turnstile');
-        
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Message must be an instance of string or HtmlStringable');
-        
-        $control->setManagedMessages('Pending', ['invalid']); // @phpstan-ignore-line
-    }
-
     public function testSetInvisibleWithTurnstile(): void
     {
-        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, 'turnstile');
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::TURNSTILE);
         $result = $control->setInvisible(true);
         self::assertSame($control, $result);
     }
 
     public function testSetInvisibleWithHcaptchaThrowsException(): void
     {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'hcaptcha');
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
         
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('hCaptcha integration does not support invisible mode');
@@ -220,7 +200,7 @@ class CaptchaControlTest extends TestCase
     {
         $control = $this->createTestableControl([
             'cf-turnstile-response' => 'valid-response'
-        ], 'turnstile');
+        ], CaptchaType::TURNSTILE);
         
         // Mock validator to return true
         $this->validator->method('verify')->willReturn(true); // @phpstan-ignore-line
@@ -233,7 +213,7 @@ class CaptchaControlTest extends TestCase
     {
         $control = $this->createTestableControl([
             'cf-turnstile-response' => ''
-        ], 'turnstile');
+        ], CaptchaType::TURNSTILE);
         
         $result = CaptchaControl::validateCaptcha($control);
         self::assertFalse($result);
@@ -259,7 +239,7 @@ class CaptchaControlTest extends TestCase
     {
         $control = $this->createTestableControl([
             'cf-turnstile-response' => 'valid-response'
-        ], 'turnstile');
+        ], CaptchaType::TURNSTILE);
         
         // Mock validator to throw exception
         $this->validator->method('verify')->willThrowException(new \Exception('Test exception')); // @phpstan-ignore-line
@@ -270,7 +250,7 @@ class CaptchaControlTest extends TestCase
 
     public function testGetControlForTurnstile(): void
     {
-        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, 'turnstile');
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::TURNSTILE);
         $html = $control->getControl();
         
         self::assertInstanceOf(Html::class, $html); // @phpstan-ignore-line
@@ -280,7 +260,7 @@ class CaptchaControlTest extends TestCase
 
     public function testGetControlForHcaptcha(): void
     {
-        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, 'hcaptcha');
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::HCAPTCHA);
         $html = $control->getControl();
         
         self::assertInstanceOf(Html::class, $html); // @phpstan-ignore-line
@@ -290,7 +270,7 @@ class CaptchaControlTest extends TestCase
 
     public function testGetControlWithManagedMessages(): void
     {
-        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, 'turnstile');
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::TURNSTILE);
         $control->setManagedMessages('Pending message', 'Resolved message');
         
         $html = $control->getControl();
@@ -314,7 +294,7 @@ class CaptchaControlTest extends TestCase
     {
         $control = $this->createTestableControl([
             'cf-turnstile-response' => 'valid-response'
-        ], 'turnstile');
+        ], CaptchaType::TURNSTILE);
         $control->setRequired(true);
         
         self::assertTrue($control->isFilled());
@@ -324,7 +304,7 @@ class CaptchaControlTest extends TestCase
     {
         $control = $this->createTestableControl([
             'cf-turnstile-response' => ''
-        ], 'turnstile');
+        ], CaptchaType::TURNSTILE);
         $control->setRequired(true);
         
         self::assertFalse($control->isFilled());
@@ -345,7 +325,7 @@ class CaptchaControlTest extends TestCase
     {
         $control = $this->createTestableControl([
             'cf-turnstile-response' => 'test-response-value'
-        ], 'turnstile');
+        ], CaptchaType::TURNSTILE);
         
         self::assertEquals('test-response-value', $control->getValue());
     }
@@ -354,7 +334,7 @@ class CaptchaControlTest extends TestCase
     {
         $control = $this->createTestableControl([
             'h-captcha-response' => 'hcaptcha-response-value'
-        ], 'hcaptcha');
+        ], CaptchaType::HCAPTCHA);
         
         self::assertEquals('hcaptcha-response-value', $control->getValue());
     }
@@ -372,11 +352,11 @@ class CaptchaControlTest extends TestCase
     public function testGetValueWithInvalidHttpData(): void
     {
         // Create a control that returns non-array HTTP data
-        $control = new class($this->validator, null, $this->siteKey, 'turnstile') extends CaptchaControl {
+        $control = new class($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE) extends CaptchaControl {
             public function getForm(bool $throw = true): ?Form // @phpstan-ignore-line
             {
                 return new class() extends Form {
-                    public function getHttpData(?int $type = null, ?string $htmlName = null) /*\Nette\Http\FileUpload|array|string|null*/
+                    public function getHttpData(?int $type = null, ?string $htmlName = null): \Nette\Http\FileUpload|array|string|null // @phpstan-ignore-line
                     {
                         return 'invalid-data'; // Non-array data
                     }
@@ -389,7 +369,7 @@ class CaptchaControlTest extends TestCase
 
     public function testGetCaptchaResponsePrivateMethodForTurnstile(): void
     {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'turnstile');
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE);
         
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($control);
@@ -407,7 +387,7 @@ class CaptchaControlTest extends TestCase
 
     public function testGetCaptchaResponsePrivateMethodForHcaptcha(): void
     {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'hcaptcha');
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
         
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($control);
@@ -421,28 +401,6 @@ class CaptchaControlTest extends TestCase
         $result = $method->invoke($control, $httpData);
         
         self::assertEquals('hcaptcha-response', $result);
-    }
-
-    public function testGetCaptchaResponsePrivateMethodWithInvalidType(): void
-    {
-        // Create control with invalid type using reflection
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, 'turnstile');
-        
-        $reflection = new \ReflectionClass($control);
-        $typeProperty = $reflection->getProperty('type');
-        $typeProperty->setAccessible(true);
-        $typeProperty->setValue($control, 'invalid-type');
-        
-        $method = $reflection->getMethod('getCaptchaResponse');
-        $method->setAccessible(true);
-        
-        $httpData = [
-            'cf-turnstile-response' => 'response',
-            'h-captcha-response' => ''
-        ];
-        $result = $method->invoke($control, $httpData);
-        
-        self::assertNull($result);
     }
 
     public function testGetMessagePrivateMethodWithStringMessage(): void

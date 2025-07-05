@@ -6,7 +6,7 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 - ✅ **Cloudflare Turnstile** integration (visible, managed, invisible modes)
 - ✅ **hCaptcha** integration (visible mode)
-- ✅ **PHP 7.4+** and **PHP 8+** support
+- ✅ **PHP 8+** support
 - ✅ **Server-side validation**
 - ✅ **Flexible configuration**
 - ✅ **Easy form integration**
@@ -14,8 +14,8 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 ## Requirements
 
-- **PHP**: 7.4, 8.0, 8.1, 8.2
-- **Nette Framework**: 3.0+ (limited by Nette forms 3.1 as max version)
+- **PHP**: 8.2+
+- **Nette Framework**: 3.0+ (limited by Nette forms 3.2 as min version)
 - **Extensions**: `curl` or `allow_url_fopen` for server-side verification
 
 
@@ -63,8 +63,8 @@ First do not forget to render relevant JS script include in your Latte templates
 
 ```latte
 {* This will include Turnstile or hCaptcha JS code *}
-{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic('turnstile')|noescape} {* <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script> *}
-{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic('hcaptcha')|noescape} {* <script src="https://js.hcaptcha.com/1/api.js" async defer></script> *}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::TURNSTILE)|noescape} {* <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script> *}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::HCAPTCHA)|noescape} {* <script src="https://js.hcaptcha.com/1/api.js" async defer></script> *}
 
 {* Include local JS to make forms validation (prevent submission when verification is missing) and to show managed states labels *}
 {* ... or manually link <LIBRARY PATH>/src/Assets/captcha-validation.js *}
@@ -118,12 +118,13 @@ If you need to create the control manually (e.g., for testing):
 ```php
 use DrabekDigital\Captcha\CaptchaControl;
 use DrabekDigital\Captcha\CaptchaValidator;
+use DrabekDigital\Captcha\Enums\CaptchaType;
 
 // Create validator manually
 $validator = new CaptchaValidator('secret-key', 'turnstile');
 
 // Create control (validator is the first mandatory parameter)
-$captcha = new CaptchaControl($validator, 'Captcha', 'site-key', 'turnstile');
+$captcha = new CaptchaControl($validator, 'Captcha', 'site-key', CaptchaType::TURNSTILE);
 ```
 
 ## Limitations

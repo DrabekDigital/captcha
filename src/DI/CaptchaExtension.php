@@ -6,6 +6,9 @@ namespace DrabekDigital\Captcha\DI;
 
 use DrabekDigital\Captcha\CaptchaControl;
 use DrabekDigital\Captcha\CaptchaValidator;
+use DrabekDigital\Captcha\Enums\CaptchaType;
+use DrabekDigital\Captcha\Enums\Size;
+use DrabekDigital\Captcha\Enums\Theme;
 use Nette\DI\CompilerExtension;
 use Nette\Forms\Container;
 use Nette\PhpGenerator\ClassType;
@@ -20,12 +23,12 @@ class CaptchaExtension extends CompilerExtension
     public function getConfigSchema(): Schema
     {
         return Expect::structure([
-            'type' => Expect::anyOf('turnstile', 'hcaptcha')->default('turnstile'),
+            'type' => Expect::anyOf(CaptchaType::TURNSTILE->value, CaptchaType::HCAPTCHA->value)->default(CaptchaType::TURNSTILE)->transform(fn (string $value) => CaptchaType::from($value)),
             'secretKey' => Expect::string()->required(),
             'siteKey' => Expect::string()->required(),
             'verifyUrl' => Expect::string()->nullable(),
-            'theme' => Expect::anyOf('light', 'dark', 'auto')->default('auto'),
-            'size' => Expect::anyOf('normal', 'compact')->default('normal'),
+            'theme' => Expect::anyOf(Theme::LIGHT->value, Theme::DARK->value, Theme::AUTO->value)->default(Theme::AUTO)->transform(fn (string $value) => Theme::from($value)),
+            'size' => Expect::anyOf(Size::NORMAL->value, Size::COMPACT->value)->default(Size::NORMAL)->transform(fn (string $value) => Size::from($value)),
         ]);
     }
 
@@ -55,6 +58,7 @@ class CaptchaExtension extends CompilerExtension
             Container::class . '::extensionMethod(?, function($form, ?string $name = null, ?string $label = null): DrabekDigital\Captcha\CaptchaControl {
                 $validator = $this->getByType(?);
                 $control = new ' . CaptchaControl::class . '($validator, $label, ?, ?);
+
                 $control->setTheme(?);
                 $control->setSize(?);
                 

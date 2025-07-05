@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrabekDigital\Captcha;
 
+use DrabekDigital\Captcha\Enums\CaptchaType;
 use Nette\Http\IRequest;
 use Nette\Utils\Json;
 use Nette\Utils\JsonException;
@@ -13,34 +14,20 @@ use Nette\Utils\JsonException;
  */
 class CaptchaValidator
 {
-    private string $secretKey;
-
-    private string $type;
-
-    private ?string $verifyUrl;
-
-    private ?IRequest $httpRequest;
-
     /**
      * Default verification URLs
      */
     private const VERIFY_URLS = [
-        'turnstile' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-        'hcaptcha' => 'https://hcaptcha.com/siteverify',
+        CaptchaType::TURNSTILE->value => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        CaptchaType::HCAPTCHA->value => 'https://hcaptcha.com/siteverify',
     ];
 
-    /**
-     * @param string $secretKey
-     * @param string $type
-     * @param string|null $verifyUrl
-     * @param IRequest|null $httpRequest
-     */
-    public function __construct(string $secretKey, string $type = 'turnstile', ?string $verifyUrl = null, ?IRequest $httpRequest = null)
-    {
-        $this->secretKey = $secretKey;
-        $this->type = $type;
-        $this->verifyUrl = $verifyUrl;
-        $this->httpRequest = $httpRequest;
+    public function __construct(
+        private readonly string $secretKey,
+        private readonly CaptchaType $type = CaptchaType::TURNSTILE,
+        private readonly ?string $verifyUrl = null,
+        private readonly ?IRequest $httpRequest = null
+    ) {
     }
 
     /**
@@ -57,9 +44,6 @@ class CaptchaValidator
         }
 
         $verifyUrl = $this->getVerifyUrl();
-        if ($verifyUrl === null || $verifyUrl === '') {
-            return false;
-        }
 
         $postData = $this->buildPostData($response, $remoteIp);
         
@@ -75,15 +59,15 @@ class CaptchaValidator
     /**
      * Get verification URL for the captcha type
      *
-     * @return string|null
+     * @return string
      */
-    private function getVerifyUrl(): ?string
+    private function getVerifyUrl(): string
     {
         if ($this->verifyUrl !== null && $this->verifyUrl !== '') {
             return $this->verifyUrl;
         }
 
-        return self::VERIFY_URLS[$this->type] ?? null;
+        return self::VERIFY_URLS[$this->type->value];
     }
 
     /**
@@ -153,17 +137,5 @@ class CaptchaValidator
         } catch (JsonException $e) {
             throw new \RuntimeException('Invalid JSON response from verification service: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Set HTTP request for getting remote IP
-     *
-     * @param IRequest $httpRequest
-     * @return static
-     */
-    public function setHttpRequest(IRequest $httpRequest): self
-    {
-        $this->httpRequest = $httpRequest;
-        return $this;
     }
 }
