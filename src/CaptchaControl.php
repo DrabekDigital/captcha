@@ -169,8 +169,8 @@ class CaptchaControl extends BaseControl
     private function getCaptchaResponse(array $httpData): ?string
     {
         return match ($this->type) {
-            CaptchaType::TURNSTILE => is_string($httpData['cf-turnstile-response']) ? $httpData['cf-turnstile-response'] : null,
-            CaptchaType::HCAPTCHA => is_string($httpData['h-captcha-response']) ? $httpData['h-captcha-response'] : null,
+            CaptchaType::TURNSTILE => is_string($httpData['cf-turnstile-response'] ?? null) ? $httpData['cf-turnstile-response'] : null,
+            CaptchaType::HCAPTCHA => is_string($httpData['h-captcha-response'] ?? null) ? $httpData['h-captcha-response'] : null,
         };
     }
 
