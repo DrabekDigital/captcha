@@ -52,7 +52,7 @@ class CaptchaExtension extends CompilerExtension
         
         $initialize = $class->getMethod('initialize');
         $initialize->addBody(
-            Container::class . '::extensionMethod(?, function($form, ?string $name = null, ?string $label = null): DrabekDigital\Captcha\CaptchaControl {
+            Container::class . '::extensionMethod(?, function($form, \?string $name = null, \?string $label = null): DrabekDigital\Captcha\CaptchaControl {
                 $validator = $this->getByType(?);
                 $control = new ' . CaptchaControl::class . '($validator, $label, ?, ?);
                 $control->setTheme(?);
