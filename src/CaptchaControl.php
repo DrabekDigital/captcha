@@ -198,9 +198,9 @@ class CaptchaControl extends BaseControl
     {
         switch ($this->type) {
             case 'turnstile':
-                return is_string($httpData['cf-turnstile-response']) ? $httpData['cf-turnstile-response'] : null;
+                return is_string($httpData['cf-turnstile-response'] ?? null) ? $httpData['cf-turnstile-response'] : null;
             case 'hcaptcha':
-                return is_string($httpData['h-captcha-response']) ? $httpData['h-captcha-response'] : null;
+                return is_string($httpData['h-captcha-response'] ?? null) ? $httpData['h-captcha-response'] : null;
             default:
                 return null;
         }
