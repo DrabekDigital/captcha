@@ -232,13 +232,13 @@
     function validateHcaptcha(container) {
         var iframe = container.querySelector('iframe[src*="hcaptcha.com"]');
         if (!iframe) {
-            showValidationError(container.getAttribute('data-require-hcaptcha'));
+            showValidationError(container.getAttribute('data-require-hcaptcha'), container);
             return false;
         }
 
         var response = iframe.getAttribute('data-hcaptcha-response');
         if (!response || response.trim() === '') {
-            showValidationError(container.getAttribute('data-require-hcaptcha'));
+            showValidationError(container.getAttribute('data-require-hcaptcha'), iframe);
             return false;
         }
 
@@ -248,28 +248,32 @@
     function validateTurnstile(container, form) {
         var responseInput = form.querySelector('input[name="cf-turnstile-response"]');
         if (!responseInput || !responseInput.value || responseInput.value.trim() === '') {
-            showValidationError(container.getAttribute('data-require-turnstile'));
+            showValidationError(container.getAttribute('data-require-turnstile'), responseInput);
             return false;
         }
 
         return true;
     }
 
-    function showValidationError(message) {
+    function showValidationError(message, element) {
         var errorMessage = message && message.trim() !== '' ? message : 'Please complete the captcha verification.';
         
         // Try to use Nette's modal functionality if available
         if (typeof Nette !== 'undefined' && typeof Nette.showFormErrors === 'function') {
             // Try using Nette.showFormErrors if available
-            Nette.showFormErrors(null, [{ message: errorMessage }]);
-        } else {
-            // Create a Nette-style modal if Nette is loaded but modal isn't accessible
-            if (typeof Nette !== 'undefined' || document.querySelector('script[src*="nette-forms"]')) {
-                showNetteStyleModal(errorMessage);
-            } else {
-                // Fallback to browser alert
-                alert(errorMessage);
+            try {
+                Nette.showFormErrors(null, [{ message: errorMessage, element: element }]);
+                return;
+            } catch (e) {
+                console.error('Error showing validation error:', e); // Fallthrough to custom handling
             }
+        }
+        // Create a Nette-style modal if Nette is loaded but modal isn't accessible
+        if (typeof Nette !== 'undefined' || document.querySelector('script[src*="nette-forms"]')) {
+            showNetteStyleModal(errorMessage);
+        } else {
+            // Fallback to browser alert
+            alert(errorMessage);
         }
     }
 
