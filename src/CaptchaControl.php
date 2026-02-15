@@ -74,6 +74,7 @@ class CaptchaControl extends BaseControl
         }
         
         if ($this->required && !$this->requiredRuleAdded) {
+            $this->getRules()->setRequired($this->getMessage());
             $this->addRule([$this, 'validateCaptcha'], $this->getMessage());
             $this->requiredRuleAdded = true;
         }
