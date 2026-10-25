@@ -21,7 +21,7 @@ class CaptchaValidatorTest extends TestCase
 
     public function testConstructorWithAllParameters(): void
     {
-        $httpRequest = $this->createMock(IRequest::class);
+        $httpRequest = self::createStub(IRequest::class);
         $validator = new CaptchaValidator(
             'secret-key',
             CaptchaType::HCAPTCHA,
@@ -41,7 +41,7 @@ class CaptchaValidatorTest extends TestCase
     public function testVerifyWithMockedHttpRequest(): void
     {
         // Create a mock HTTP request
-        $httpRequest = $this->createMock(IRequest::class);
+        $httpRequest = self::createStub(IRequest::class);
         $httpRequest->method('getRemoteAddress')->willReturn('127.0.0.1');
 
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, $httpRequest);
@@ -83,7 +83,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('getVerifyUrl');
-        $method->setAccessible(true);
         
         $result = $method->invoke($validator);
         self::assertEquals('https://challenges.cloudflare.com/turnstile/v0/siteverify', $result);
@@ -99,7 +98,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('getVerifyUrl');
-        $method->setAccessible(true);
         
         $result = $method->invoke($validator);
         self::assertEquals('https://hcaptcha.com/siteverify', $result);
@@ -116,7 +114,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('getVerifyUrl');
-        $method->setAccessible(true);
         
         $result = $method->invoke($validator);
         self::assertEquals($customUrl, $result);
@@ -132,7 +129,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('buildPostData');
-        $method->setAccessible(true);
         
         $result = $method->invoke($validator, 'test-response');
         
@@ -151,7 +147,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('buildPostData');
-        $method->setAccessible(true);
         
         $result = $method->invoke($validator, 'test-response', '192.168.1.1');
         
@@ -166,7 +161,7 @@ class CaptchaValidatorTest extends TestCase
      */
     public function testBuildPostDataWithHttpRequest(): void
     {
-        $httpRequest = $this->createMock(IRequest::class);
+        $httpRequest = self::createStub(IRequest::class);
         $httpRequest->method('getRemoteAddress')->willReturn('10.0.0.1');
         
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, $httpRequest);
@@ -174,7 +169,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('buildPostData');
-        $method->setAccessible(true);
         
         $result = $method->invoke($validator, 'test-response');
         
@@ -194,7 +188,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('parseResponse');
-        $method->setAccessible(true);
         
         $validResponse = json_encode(['success' => true]);
         $result = $method->invoke($validator, $validResponse);
@@ -215,7 +208,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('parseResponse');
-        $method->setAccessible(true);
         
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Invalid JSON response from verification service');
@@ -233,7 +225,6 @@ class CaptchaValidatorTest extends TestCase
         // Use reflection to test the private method
         $reflection = new \ReflectionClass($validator);
         $method = $reflection->getMethod('parseResponse');
-        $method->setAccessible(true);
         
         $responseWithoutSuccess = json_encode(['error' => 'something']);
         $result = $method->invoke($validator, $responseWithoutSuccess);

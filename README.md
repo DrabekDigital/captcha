@@ -6,7 +6,7 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 - ✅ **Cloudflare Turnstile** integration (visible, managed, invisible modes)
 - ✅ **hCaptcha** integration (visible mode)
-- ✅ **PHP 8+** support
+- ✅ **PHP 8.3+** support
 - ✅ **Server-side validation**
 - ✅ **Flexible configuration**
 - ✅ **Easy form integration**
@@ -14,8 +14,8 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 ## Requirements
 
-- **PHP**: 8.2+
-- **Nette Framework**: 3.0+ (limited by Nette forms 3.2 as min version)
+- **PHP**: 8.3+
+- **Nette Forms**: 3.2+
 - **Extensions**: `curl` or `allow_url_fopen` for server-side verification
 
 
@@ -52,7 +52,7 @@ captcha:
 | `secretKey` | string | **Yes** | - | Your secret key from the captcha provider |
 | `siteKey` | string | **Yes** | - | Your site key from the captcha provider |
 | `verifyUrl` | string | No | - | Custom verification URL (uses default if not set) |
-| `theme` | string | No | `auto` | Theme: `light`, `dark`, or `auto` |
+| `theme` | string | No | `auto` | Theme: `light`, `dark`, or `auto` (hCaptcha does not support `auto` and uses its default `light` theme) |
 | `size` | string | No | `normal` | Size: `normal`, `compact`, `flexible` (Turnstile only) or `invisible` (hCaptcha only, executed by the bundled JS on form submission) |
 
 ## Usage
@@ -121,7 +121,7 @@ use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\Enums\CaptchaType;
 
 // Create validator manually
-$validator = new CaptchaValidator('secret-key', 'turnstile');
+$validator = new CaptchaValidator('secret-key', CaptchaType::TURNSTILE);
 
 // Create control (validator is the first mandatory parameter)
 $captcha = new CaptchaControl($validator, 'Captcha', 'site-key', CaptchaType::TURNSTILE);

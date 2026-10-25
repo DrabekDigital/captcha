@@ -209,7 +209,8 @@ class CaptchaControl extends BaseControl
             CaptchaType::HCAPTCHA => $el->addAttributes([
                 'class' => 'h-captcha',
                 'data-sitekey' => $this->siteKey,
-                'data-theme' => $this->theme->value,
+                // hCaptcha supports only light and dark, omit the attribute to use its default
+                'data-theme' => $this->theme === Theme::AUTO ? null : $this->theme->value,
                 'data-size' => $this->size->value,
                 'data-require-hcaptcha' => $this->getMessage(true),
             ]),

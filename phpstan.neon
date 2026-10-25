@@ -5,11 +5,6 @@ includes:
 
 parameters:
     level: max
-    exceptions:
-        checkedExceptionClasses:
-            - Kiwicom\Loopbind\Exceptions\CheckedException
-        check:
-            missingCheckedExceptionInThrows: true
     ignoreErrors:
         # Ignore extension method addCaptcha that is dynamically added by DI extension
         - '#Call to an undefined method Nette\\Forms\\Form::addCaptcha\(\)#'

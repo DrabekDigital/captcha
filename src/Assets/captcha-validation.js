@@ -100,9 +100,10 @@
             return;
         }
 
-        // Find message elements
-        var pendingMessage = document.querySelector('.captcha-managed-invisible-message-pending');
-        var resolvedMessage = document.querySelector('.captcha-managed-invisible-message-resolved');
+        // Find message elements rendered next to this captcha (not elsewhere on the page)
+        var scope = turnstileElement.parentNode || form;
+        var pendingMessage = scope.querySelector('.captcha-managed-invisible-message-pending');
+        var resolvedMessage = scope.querySelector('.captcha-managed-invisible-message-resolved');
 
         if (!pendingMessage && !resolvedMessage) {
             return;
@@ -279,7 +280,8 @@
     function validateTurnstile(container, form) {
         var responseInput = form.querySelector('input[name="cf-turnstile-response"]');
         if (!responseInput || !responseInput.value || responseInput.value.trim() === '') {
-            showValidationError(container.getAttribute('data-require-turnstile'), responseInput);
+            // The response input does not exist until the widget is rendered
+            showValidationError(container.getAttribute('data-require-turnstile'), responseInput || container);
             return false;
         }
 
