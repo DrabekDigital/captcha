@@ -467,6 +467,8 @@ class CaptchaControlTest extends TestCase
             public function __construct(private array $httpData)
             {
                 parent::__construct('form');
+                // Normally initialized by the overridden getHttpData()
+                $this->setSubmittedBy(null);
             }
 
             public function getHttpData(?int $type = null, ?string $htmlName = null): array|string|null
