@@ -19,6 +19,12 @@
             // Check for hCaptcha validation requirements
             var hcaptchaContainers = form.querySelectorAll('[data-require-hcaptcha]');
             for (var i = 0; i < hcaptchaContainers.length; i++) {
+                // Invisible hCaptcha has to be executed, the form is submitted again once solved
+                if (hcaptchaContainers[i].getAttribute('data-size') === 'invisible' && !getHcaptchaResponse(hcaptchaContainers[i])) {
+                    e.preventDefault();
+                    executeInvisibleHcaptcha(hcaptchaContainers[i], form, e.submitter);
+                    return false;
+                }
                 if (!validateHcaptcha(hcaptchaContainers[i])) {
                     e.preventDefault();
                     return false;
@@ -228,6 +234,31 @@
         }
         
         return null;
+    }
+
+    function getHcaptchaResponse(container) {
+        var iframe = container.querySelector('iframe[src*="hcaptcha.com"]');
+        var response = iframe ? iframe.getAttribute('data-hcaptcha-response') : null;
+        return response && response.trim() !== '' ? response : null;
+    }
+
+    function executeInvisibleHcaptcha(container, form, submitter) {
+        var message = container.getAttribute('data-require-hcaptcha');
+        var iframe = container.querySelector('iframe[data-hcaptcha-widget-id]');
+        if (typeof hcaptcha === 'undefined' || !iframe) {
+            showValidationError(message, container);
+            return;
+        }
+
+        hcaptcha.execute(iframe.getAttribute('data-hcaptcha-widget-id'), { async: true }).then(function() {
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit(submitter || undefined);
+            } else {
+                form.submit();
+            }
+        }, function() {
+            showValidationError(message, container);
+        });
     }
 
     function validateHcaptcha(container) {

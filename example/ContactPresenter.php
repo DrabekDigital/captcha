@@ -44,8 +44,10 @@ class ContactPresenter extends Presenter
         $form->addCaptcha('captcha', 'Bot protection')
             ->setManagedMessages('Check will be performed on background', Html::el('em')->setHtml('Check has been performed successfully.'));
 
-        // 4. Invisible captcha (only for Turnstile)
+        // 4. Invisible captcha (Turnstile + hCaptcha)
         // The control + label will be hidden, the only thing that can be shown is required message.
+        // Turnstile: choose the Invisible widget mode for the site key in the Cloudflare dashboard.
+        // hCaptcha: rendered as invisible and executed by the bundled JS when the form is submitted.
         $form->addCaptcha('captcha', 'Bot protection')
             ->setInvisible(true);
         
