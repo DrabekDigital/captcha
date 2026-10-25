@@ -130,7 +130,7 @@ class CaptchaValidator
     private function parseResponse(string $response): bool
     {
         try {
-            $data = Json::decode($response, Json::FORCE_ARRAY);
+            $data = Json::decode($response, forceArrays: true);
             
             // Standard response format for both Turnstile and hCaptcha
             return is_array($data) && isset($data['success']) && $data['success'] === true;
