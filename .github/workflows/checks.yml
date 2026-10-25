@@ -1,16 +1,25 @@
 name: Checks
 
-on: [push]
+on:
+  push:
+  # Fork pull requests run only after a maintainer approves them (repository Actions settings)
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-test:
+    # Pull requests from this repository are already tested by the push event
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     strategy:
       matrix:
         php-version: ['8.2', '8.3', '8.4', '8.5']
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Setup PHP Action
         uses: shivammathur/setup-php@v2
