@@ -52,7 +52,7 @@ captcha:
 | `secretKey` | string | **Yes** | - | Your secret key from the captcha provider |
 | `siteKey` | string | **Yes** | - | Your site key from the captcha provider |
 | `verifyUrl` | string | No | - | Custom verification URL (uses default if not set) |
-| `theme` | string | No | `auto` | Theme: `light`, `dark`, or `auto` |
+| `theme` | string | No | `auto` | Theme: `light`, `dark`, or `auto` (hCaptcha does not support `auto` and uses its default `light` theme) |
 | `size` | string | No | `normal` | Size: `normal` or `compact` |
 
 ## Usage
