@@ -11,6 +11,7 @@ use DrabekDigital\Captcha\Enums\Size;
 use DrabekDigital\Captcha\Enums\Theme;
 use Nette\Forms\Form;
 use Nette\Utils\Html;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Stringable;
 
@@ -72,7 +73,7 @@ class CaptchaControlTest extends TestCase
                 // Return a mock form that provides the expected HTTP data
                 $form = new class($this->mockHttpData) extends Form {
                     private array $httpData; // @phpstan-ignore-line
-                    
+
                     public function __construct(array $httpData) // @phpstan-ignore-line
                     {
                         $this->httpData = $httpData;
@@ -80,7 +81,7 @@ class CaptchaControlTest extends TestCase
                     
                     public function getHttpData(?int $type = null, ?string $htmlName = null): \Nette\Http\FileUpload|array|string|null // @phpstan-ignore-line
                     {
-                        return $this->httpData;
+                        return $this->httpData; // @phpstan-ignore-line
                     }
                 };
                 return $form;
@@ -121,11 +122,21 @@ class CaptchaControlTest extends TestCase
         self::assertSame($control, $result);
     }
 
-    public function testSetRequiredWithBooleanFalse(): void
+    public function testSetRequiredWithBooleanFalseThrowsException(): void
     {
         $control = new CaptchaControl($this->validator);
-        $result = $control->setRequired(false);
-        self::assertSame($control, $result);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Captcha cannot be optional');
+
+        $control->setRequired(false);
+    }
+
+    public function testIsRequiredByDefault(): void
+    {
+        $control = new CaptchaControl($this->validator);
+
+        self::assertTrue($control->isRequired());
     }
 
     public function testSetRequiredWithStringMessage(): void
@@ -282,14 +293,6 @@ class CaptchaControlTest extends TestCase
         self::assertStringContainsString('Resolved message', $rendered);
     }
 
-    public function testIsFilledWhenNotRequired(): void
-    {
-        $control = new CaptchaControl($this->validator);
-        $control->setRequired(false);
-        
-        self::assertTrue($control->isFilled());
-    }
-
     public function testIsFilledWhenRequiredWithValidResponse(): void
     {
         $control = $this->createTestableControl([
@@ -444,5 +447,143 @@ class CaptchaControlTest extends TestCase
         
         $result = $method->invoke($control);
         self::assertEquals('Please verify you are human.', $result);
+    }
+
+    /**
+     * Helper method to create a real form whose submitted data are the given HTTP data
+     *
+     * @param array<string, string> $httpData
+     * @return Form
+     */
+    private function createSubmittedForm(array $httpData): Form
+    {
+        return new class($httpData) extends Form {
+            /**
+             * @param array<string, string> $httpData
+             */
+            public function __construct(private array $httpData)
+            {
+                parent::__construct('form');
+            }
+
+            public function getHttpData(?int $type = null, ?string $htmlName = null): array|string|null
+            {
+                return $htmlName === null ? $this->httpData : ($this->httpData[$htmlName] ?? null);
+            }
+        };
+    }
+
+    /**
+     * Configurations which used to skip server-side validation
+     *
+     * @return array<string, array{\Closure(CaptchaControl): mixed}>
+     */
+    public static function configurationsProvider(): array
+    {
+        return [
+            'default' => [fn (CaptchaControl $control) => $control],
+            'setRequired' => [fn (CaptchaControl $control) => $control->setRequired()],
+            'invisible' => [fn (CaptchaControl $control) => $control->setInvisible()],
+            'managed' => [fn (CaptchaControl $control) => $control->setManagedMessages('Pending', 'Resolved')],
+        ];
+    }
+
+    /**
+     * @param \Closure(CaptchaControl): mixed $configure
+     */
+    #[DataProvider('configurationsProvider')]
+    public function testFormWithoutResponseIsInvalid(\Closure $configure): void
+    {
+        $validator = $this->createMock(CaptchaValidator::class);
+        $validator->expects(self::never())->method('verify');
+
+        $form = $this->createSubmittedForm(['send' => '1']);
+        $control = new CaptchaControl($validator, 'Captcha', $this->siteKey);
+        $form->addComponent($control, 'captcha');
+        $configure($control);
+
+        $form->validate();
+
+        self::assertFalse($form->isValid());
+        self::assertSame(['Please verify you are human.'], $form->getErrors());
+    }
+
+    /**
+     * @param \Closure(CaptchaControl): mixed $configure
+     */
+    #[DataProvider('configurationsProvider')]
+    public function testFormWithInvalidResponseIsInvalid(\Closure $configure): void
+    {
+        $validator = $this->createMock(CaptchaValidator::class);
+        $validator->expects(self::once())->method('verify')->with('fake-token')->willReturn(false);
+
+        $form = $this->createSubmittedForm(['send' => '1', 'cf-turnstile-response' => 'fake-token']);
+        $control = new CaptchaControl($validator, 'Captcha', $this->siteKey);
+        $form->addComponent($control, 'captcha');
+        $configure($control);
+
+        $form->validate();
+
+        self::assertFalse($form->isValid());
+    }
+
+    /**
+     * @param \Closure(CaptchaControl): mixed $configure
+     */
+    #[DataProvider('configurationsProvider')]
+    public function testFormWithValidResponseIsValid(\Closure $configure): void
+    {
+        $validator = $this->createMock(CaptchaValidator::class);
+        $validator->expects(self::once())->method('verify')->with('valid-token')->willReturn(true);
+
+        $form = $this->createSubmittedForm(['send' => '1', 'cf-turnstile-response' => 'valid-token']);
+        $control = new CaptchaControl($validator, 'Captcha', $this->siteKey);
+        $form->addComponent($control, 'captcha');
+        $configure($control);
+
+        $form->validate();
+
+        self::assertTrue($form->isValid());
+    }
+
+    public function testHcaptchaFormWithoutResponseIsInvalidByDefault(): void
+    {
+        $validator = $this->createMock(CaptchaValidator::class);
+        $validator->expects(self::never())->method('verify');
+
+        $form = $this->createSubmittedForm(['send' => '1', 'cf-turnstile-response' => 'wrong-provider-token']);
+        $form->addComponent(new CaptchaControl($validator, 'Captcha', $this->siteKey, CaptchaType::HCAPTCHA), 'captcha');
+
+        $form->validate();
+
+        self::assertFalse($form->isValid());
+    }
+
+    public function testCustomMessageReplacesDefaultMessage(): void
+    {
+        $validator = $this->createMock(CaptchaValidator::class);
+        $form = $this->createSubmittedForm(['send' => '1']);
+        $control = new CaptchaControl($validator, 'Captcha', $this->siteKey);
+        $form->addComponent($control, 'captcha');
+        $control->setRequired('Custom message');
+
+        $form->validate();
+
+        self::assertSame(['Custom message'], $form->getErrors());
+    }
+
+    public function testRepeatedSetRequiredDoesNotDuplicateRules(): void
+    {
+        $validator = $this->createMock(CaptchaValidator::class);
+        $validator->expects(self::once())->method('verify')->willReturn(false);
+
+        $form = $this->createSubmittedForm(['send' => '1', 'cf-turnstile-response' => 'fake-token']);
+        $control = new CaptchaControl($validator, 'Captcha', $this->siteKey);
+        $form->addComponent($control, 'captcha');
+        $control->setRequired()->setRequired('First')->setRequired('Second');
+
+        $form->validate();
+
+        self::assertSame(['Second'], $form->getErrors());
     }
 }

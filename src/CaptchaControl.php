@@ -7,6 +7,7 @@ namespace DrabekDigital\Captcha;
 use DrabekDigital\Captcha\Enums\CaptchaType;
 use DrabekDigital\Captcha\Enums\Size;
 use DrabekDigital\Captcha\Enums\Theme;
+use Nette\Forms\Control;
 use Nette\Forms\Controls\BaseControl;
 use Nette\HtmlStringable;
 use Nette\Utils\Html;
@@ -17,11 +18,11 @@ use Stringable;
  */
 class CaptchaControl extends BaseControl
 {
+    private const DEFAULT_MESSAGE = 'Please verify you are human.';
+
     private Theme $theme = Theme::AUTO;
 
     private Size $size = Size::NORMAL;
-
-    private bool $required = true;
 
     private string|HtmlStringable|Stringable|null $message = null;
 
@@ -33,8 +34,6 @@ class CaptchaControl extends BaseControl
 
     private CaptchaValidator $validator;
 
-    private bool $requiredRuleAdded = false;
-
     public function __construct(
         CaptchaValidator $validator,
         ?string $label = null,
@@ -44,6 +43,8 @@ class CaptchaControl extends BaseControl
         parent::__construct($label);
         $this->validator = $validator;
         $this->setOmitted();
+        // Captcha is always required, otherwise the form would pass without server-side verification
+        $this->setRequired();
     }
 
     public function setTheme(Theme $theme): self
@@ -59,26 +60,27 @@ class CaptchaControl extends BaseControl
     }
 
     /**
-     * Set if captcha is required
+     * Set message shown when captcha is not solved (captcha is always required)
      *
      * @param string|Stringable|HtmlStringable|bool $value
      * @return static
      */
     public function setRequired(string|Stringable|HtmlStringable|bool $value = true): static
     {
-        if (is_string($value) || $value instanceof HtmlStringable || $value instanceof Stringable) {
-            $this->required = true;
+        if ($value === false) {
+            throw new \InvalidArgumentException('Captcha cannot be optional, remove the control from the form instead.');
+        }
+
+        if ($value !== true) {
             $this->message = $value;
-        } else {
-            $this->required = $value;
         }
-        
-        if ($this->required && !$this->requiredRuleAdded) {
-            $this->getRules()->setRequired($this->getMessage());
-            $this->addRule([$this, 'validateCaptcha'], $this->getMessage());
-            $this->requiredRuleAdded = true;
-        }
-        
+
+        // Re-add rules so they always carry the current message, the default one is translated by Nette on validation
+        $message = $this->message !== null ? $this->getMessage() : self::DEFAULT_MESSAGE;
+        $this->getRules()->removeRule([$this, 'validateCaptcha']);
+        $this->getRules()->setRequired($message);
+        $this->addRule([$this, 'validateCaptcha'], $message);
+
         return $this;
     }
 
@@ -120,11 +122,15 @@ class CaptchaControl extends BaseControl
     /**
      * Validate captcha response
      *
-     * @param CaptchaControl $control
+     * @param Control $control
      * @return bool
      */
-    public static function validateCaptcha(self $control): bool
+    public static function validateCaptcha(Control $control): bool
     {
+        if (!$control instanceof self) {
+            return false;
+        }
+
         $form = $control->getForm();
 
         $httpData = $form->getHttpData();
@@ -154,9 +160,9 @@ class CaptchaControl extends BaseControl
         if ($this->message instanceof HtmlStringable || $this->message instanceof Stringable) {
             return $this->message->__toString();
         }
-        $fallbackMessage = $this->translate('Please verify you are human.');
+        $fallbackMessage = $this->translate(self::DEFAULT_MESSAGE);
         if (!is_string($fallbackMessage)) {
-            $fallbackMessage = 'Please verify you are human.';
+            $fallbackMessage = self::DEFAULT_MESSAGE;
         }
         return is_string($this->message) ? $this->message : $fallbackMessage;
     }
@@ -236,12 +242,7 @@ class CaptchaControl extends BaseControl
      */
     public function isFilled(): bool
     {
-        if (!$this->required) {
-            return true;
-        }
-
         $form = $this->getForm();
-
 
         $httpData = $form->getHttpData();
         if (!is_array($httpData)) {
