@@ -286,7 +286,6 @@ class CaptchaExtensionTest extends TestCase
         // Use reflection to set the config
         $reflection = new \ReflectionClass($extension);
         $configProperty = $reflection->getProperty('config');
-        $configProperty->setAccessible(true);
         $configProperty->setValue($extension, $config);
         
         // Create a mock class to test afterCompile
@@ -364,7 +363,6 @@ class CaptchaExtensionTest extends TestCase
         // Use reflection to check if the same validator instance is used
         $reflection = new \ReflectionClass($control);
         $validatorProperty = $reflection->getProperty('validator');
-        $validatorProperty->setAccessible(true);
         $controlValidator = $validatorProperty->getValue($control);
         
         self::assertSame($validator, $controlValidator);

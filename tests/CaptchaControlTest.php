@@ -25,7 +25,7 @@ class CaptchaControlTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->validator = $this->createMock(CaptchaValidator::class);
+        $this->validator = self::createStub(CaptchaValidator::class);
     }
 
     /**
@@ -42,7 +42,7 @@ class CaptchaControlTest extends TestCase
             'h-captcha-response' => ''
         ], $httpData);
         
-        $form = $this->createMock(Form::class);
+        $form = self::createStub(Form::class);
         $form->method('getHttpData')->willReturn($completeData);
         return $form;
     }
@@ -380,7 +380,6 @@ class CaptchaControlTest extends TestCase
         // Use reflection to test the private method
         $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getCaptchaResponse');
-        $method->setAccessible(true);
         
         $httpData = [
             'cf-turnstile-response' => 'turnstile-response',
@@ -398,7 +397,6 @@ class CaptchaControlTest extends TestCase
         // Use reflection to test the private method
         $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getCaptchaResponse');
-        $method->setAccessible(true);
         
         $httpData = [
             'cf-turnstile-response' => '',
@@ -417,7 +415,6 @@ class CaptchaControlTest extends TestCase
         // Use reflection to test the private method
         $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getMessage');
-        $method->setAccessible(true);
         
         $result = $method->invoke($control);
         self::assertEquals('Custom message', $result);
@@ -432,7 +429,6 @@ class CaptchaControlTest extends TestCase
         // Use reflection to test the private method
         $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getMessage');
-        $method->setAccessible(true);
         
         $result = $method->invoke($control);
         self::assertEquals('<span>HTML message</span>', $result);
@@ -446,7 +442,6 @@ class CaptchaControlTest extends TestCase
         // Use reflection to test the private method
         $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getMessage');
-        $method->setAccessible(true);
         
         $result = $method->invoke($control);
         self::assertEquals('Please verify you are human.', $result);
@@ -566,7 +561,7 @@ class CaptchaControlTest extends TestCase
 
     public function testCustomMessageReplacesDefaultMessage(): void
     {
-        $validator = $this->createMock(CaptchaValidator::class);
+        $validator = self::createStub(CaptchaValidator::class);
         $form = $this->createSubmittedForm(['send' => '1']);
         $control = new CaptchaControl($validator, 'Captcha', $this->siteKey);
         $form->addComponent($control, 'captcha');
