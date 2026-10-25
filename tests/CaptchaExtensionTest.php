@@ -18,6 +18,7 @@ use Nette\Forms\Form;
 use Nette\PhpGenerator\ClassType;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 class CaptchaExtensionTest extends TestCase
 {
@@ -228,6 +229,24 @@ class CaptchaExtensionTest extends TestCase
         $validator = $container->getService('captcha.validator');
         $property = (new \ReflectionClass($validator))->getProperty('transport');
         self::assertInstanceOf(Psr18Transport::class, $property->getValue($validator));
+    }
+
+    public function testLoadConfigurationAutowiresLogger(): void
+    {
+        $config = [
+            'services' => [NullLogger::class],
+            'captcha' => [
+                'secretKey' => 'test-secret-key',
+                'siteKey' => 'test-site-key'
+            ]
+        ];
+
+        $container = $this->createContainer($config);
+
+        /** @var CaptchaValidator $validator */
+        $validator = $container->getService('captcha.validator');
+        $property = (new \ReflectionClass($validator))->getProperty('logger');
+        self::assertInstanceOf(NullLogger::class, $property->getValue($validator));
     }
 
     public function testLoadConfigurationWithHcaptcha(): void

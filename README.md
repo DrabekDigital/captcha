@@ -149,6 +149,15 @@ Without DI pass them to the constructor:
 $validator = new CaptchaValidator('secret-key', CaptchaType::TURNSTILE, httpClient: $client, requestFactory: $factory, streamFactory: $factory);
 ```
 
+### Logging
+
+When a PSR-3 `Psr\Log\LoggerInterface` service is registered (e.g. Monolog, or Tracy via `Tracy\Bridges\Psr\TracyToPsrLoggerAdapter`), it is autowired into the validator:
+
+- `error` – the verification service is unavailable or the integration is misconfigured (e.g. `invalid-input-secret`, `sitekey-secret-mismatch`)
+- `info` – the visitor's token was rejected (e.g. expired or already used)
+
+Without a logger, errors are written to the PHP error log.
+
 ## Limitations
 
 - Only implicit rendering support for both providers (primarily due to reliability).

@@ -16,6 +16,7 @@ use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\AbstractLogger;
 use ReflectionClass;
 
 class CaptchaValidatorTest extends TestCase
@@ -340,5 +341,95 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client);
 
         self::assertFalse($validator->verify('token'));
+    }
+
+    /**
+     * Create logger recording all records
+     *
+     * @return AbstractLogger&object{records: list<array{mixed, string, array<mixed>}>}
+     */
+    private function createLogger(): AbstractLogger
+    {
+        return new class() extends AbstractLogger {
+            /** @var list<array{mixed, string, array<mixed>}> */
+            public array $records = [];
+
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $this->records[] = [$level, (string) $message, $context];
+            }
+        };
+    }
+
+    public function testVerifyLogsUnavailableServiceAsError(): void
+    {
+        $exception = new class('Connection refused') extends \RuntimeException implements ClientExceptionInterface {
+        };
+        $logger = $this->createLogger();
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, httpClient: $this->createHttpClient($exception), logger: $logger);
+
+        self::assertFalse($validator->verify('token'));
+        self::assertCount(1, $logger->records);
+        self::assertSame('error', $logger->records[0][0]);
+        self::assertSame('Captcha verification service is unavailable: Failed to contact verification service: Connection refused', $logger->records[0][1]);
+        self::assertInstanceOf(\Throwable::class, $logger->records[0][2]['exception'] ?? null);
+    }
+
+    public function testVerifyLogsInvalidResponseAsError(): void
+    {
+        $logger = $this->createLogger();
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, httpClient: $this->createHttpClient('<html>Bad gateway</html>'), logger: $logger);
+
+        self::assertFalse($validator->verify('token'));
+        self::assertSame('error', $logger->records[0][0]);
+        self::assertStringStartsWith('Captcha verification service is unavailable: Invalid JSON response', $logger->records[0][1]);
+    }
+
+    public function testVerifyLogsMisconfigurationAsError(): void
+    {
+        $logger = $this->createLogger();
+        $client = $this->createHttpClient('{"success":false,"error-codes":["invalid-input-secret"]}');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, httpClient: $client, logger: $logger);
+
+        self::assertFalse($validator->verify('token'));
+        self::assertSame([
+            ['error', 'Captcha verification is misconfigured: invalid-input-secret', ['error-codes' => ['invalid-input-secret']]],
+        ], $logger->records);
+    }
+
+    public function testVerifyLogsRejectedTokenAsInfo(): void
+    {
+        $logger = $this->createLogger();
+        $client = $this->createHttpClient('{"success":false,"error-codes":["timeout-or-duplicate"]}');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, httpClient: $client, logger: $logger);
+
+        self::assertFalse($validator->verify('token'));
+        self::assertSame([
+            ['info', 'Captcha token was rejected: timeout-or-duplicate', ['error-codes' => ['timeout-or-duplicate']]],
+        ], $logger->records);
+    }
+
+    public function testVerifyDoesNotLogSuccess(): void
+    {
+        $logger = $this->createLogger();
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, httpClient: $this->createHttpClient('{"success":true}'), logger: $logger);
+
+        self::assertTrue($validator->verify('token'));
+        self::assertSame([], $logger->records);
+    }
+
+    public function testVerifyWithoutLoggerWritesErrorsToErrorLog(): void
+    {
+        $errorLog = (string) tempnam(sys_get_temp_dir(), 'captcha');
+        $previous = ini_set('error_log', $errorLog);
+        try {
+            $client = $this->createHttpClient('{"success":false,"error-codes":["invalid-input-secret"]}');
+            (new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client))->verify('token');
+
+            self::assertStringContainsString('Captcha verification is misconfigured: invalid-input-secret', (string) file_get_contents($errorLog));
+        } finally {
+            ini_set('error_log', (string) $previous);
+            unlink($errorLog);
+        }
     }
 }
