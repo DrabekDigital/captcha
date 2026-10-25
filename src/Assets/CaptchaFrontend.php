@@ -6,6 +6,7 @@ namespace DrabekDigital\Captcha\Assets;
 
 use DrabekDigital\Captcha\Enums\CaptchaType;
 use Nette\StaticClass;
+use Nette\Utils\FileSystem;
 
 class CaptchaFrontend
 {
@@ -28,9 +29,10 @@ class CaptchaFrontend
     /**
      * Get JavaScript code for captcha form validation and managed states labels
      * @return string
+     * @throws \Nette\IOException when the bundled script cannot be read
      */
     public static function getLocalJavascriptStatic(): string
     {
-        return "<script>" . file_get_contents(__DIR__ . '/captcha-validation.js') . "</script>";
+        return "<script>" . FileSystem::read(__DIR__ . '/captcha-validation.js') . "</script>";
     }
 }
