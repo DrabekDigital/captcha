@@ -58,6 +58,9 @@ class CaptchaControl extends BaseControl
         if (!$size->isSupportedBy($this->type)) {
             throw new \InvalidArgumentException(sprintf('Size "%s" is not supported by %s', $size->value, $this->type->value));
         }
+        if ($this->isInvisible && $this->type === CaptchaType::HCAPTCHA) {
+            throw new \InvalidArgumentException('Size of invisible hCaptcha cannot be changed');
+        }
 
         $this->size = $size;
         return $this;
@@ -109,15 +112,14 @@ class CaptchaControl extends BaseControl
     /**
      * Set when captcha is always rendered as invisible to hide the field entry from the user
      *
+     * Turnstile invisible mode is configured on the site key in the Cloudflare dashboard, this only hides the label.
+     * hCaptcha is rendered with the invisible size and executed by the bundled JS on form submission.
+     *
      * @param bool $isInvisible
      * @return static
      */
     public function setInvisible(bool $isInvisible = true): self
     {
-        if ($this->type === CaptchaType::HCAPTCHA) {
-            throw new \InvalidArgumentException('hCaptcha integration does not support invisible mode');
-        }
-
         $this->isInvisible = $isInvisible;
         $this->setCaption('');
         return $this;
@@ -211,7 +213,8 @@ class CaptchaControl extends BaseControl
                 'data-sitekey' => $this->siteKey,
                 // hCaptcha supports only light and dark, omit the attribute to use its default
                 'data-theme' => $this->theme === Theme::AUTO ? null : $this->theme->value,
-                'data-size' => $this->size->value,
+                // Invisible hCaptcha is a widget size, it is executed by the bundled JS on form submission
+                'data-size' => $this->isInvisible ? 'invisible' : $this->size->value,
                 'data-require-hcaptcha' => $this->getMessage(true),
             ]),
         };

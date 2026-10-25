@@ -10,15 +10,12 @@ enum Size: string
     case COMPACT = 'compact';
     /** Turnstile only, widget takes the full width of its container */
     case FLEXIBLE = 'flexible';
-    /** hCaptcha only, the challenge is shown only when needed on form submission */
-    case INVISIBLE = 'invisible';
 
     public function isSupportedBy(CaptchaType $type): bool
     {
         return match ($this) {
             self::NORMAL, self::COMPACT => true,
             self::FLEXIBLE => $type === CaptchaType::TURNSTILE,
-            self::INVISIBLE => $type === CaptchaType::HCAPTCHA,
         };
     }
 }

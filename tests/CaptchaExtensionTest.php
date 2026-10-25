@@ -142,18 +142,18 @@ class CaptchaExtensionTest extends TestCase
         $schema = (new CaptchaExtension())->getConfigSchema();
 
         $normalized = $schema->normalize([
-            'type' => 'hcaptcha',
+            'type' => 'turnstile',
             'secretKey' => 'test-secret',
             'siteKey' => 'test-site',
             'theme' => 'dark',
-            'size' => 'invisible',
+            'size' => 'flexible',
         ], new \Nette\Schema\Context());
         /** @var object{type: CaptchaType, theme: Theme, size: Size} $normalized */
         $normalized = $schema->complete($normalized, new \Nette\Schema\Context());
 
-        self::assertSame(CaptchaType::HCAPTCHA, $normalized->type);
+        self::assertSame(CaptchaType::TURNSTILE, $normalized->type);
         self::assertSame(Theme::DARK, $normalized->theme);
-        self::assertSame(Size::INVISIBLE, $normalized->size);
+        self::assertSame(Size::FLEXIBLE, $normalized->size);
     }
 
     public function testLoadConfigurationWithUnsupportedSizeThrowsException(): void

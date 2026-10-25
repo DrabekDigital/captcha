@@ -126,14 +126,6 @@ class CaptchaControlTest extends TestCase
         self::assertStringContainsString('data-size="flexible"', $control->getControl()->render());
     }
 
-    public function testSetInvisibleSizeForHcaptcha(): void
-    {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
-        $control->setSize(Size::INVISIBLE);
-
-        self::assertStringContainsString('data-size="invisible"', $control->getControl()->render());
-    }
-
     public function testSetFlexibleSizeForHcaptchaThrowsException(): void
     {
         $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
@@ -142,16 +134,6 @@ class CaptchaControlTest extends TestCase
         $this->expectExceptionMessage('Size "flexible" is not supported by hcaptcha');
 
         $control->setSize(Size::FLEXIBLE);
-    }
-
-    public function testSetInvisibleSizeForTurnstileThrowsException(): void
-    {
-        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE);
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Size "invisible" is not supported by turnstile');
-
-        $control->setSize(Size::INVISIBLE);
     }
 
     public function testSetRequiredWithBooleanTrue(): void
@@ -236,14 +218,44 @@ class CaptchaControlTest extends TestCase
         self::assertSame($control, $result);
     }
 
-    public function testSetInvisibleWithHcaptchaThrowsException(): void
+    public function testSetInvisibleWithHcaptchaRendersInvisibleSize(): void
+    {
+        $control = new CaptchaControl($this->validator, 'Captcha', $this->siteKey, CaptchaType::HCAPTCHA);
+        $control->setSize(Size::COMPACT);
+        $control->setInvisible();
+
+        self::assertStringContainsString('data-size="invisible"', $control->getControl()->render());
+        self::assertSame('', $control->getCaption());
+    }
+
+    public function testSetInvisibleWithTurnstileKeepsSize(): void
+    {
+        $control = new CaptchaControl($this->validator, 'Captcha', $this->siteKey, CaptchaType::TURNSTILE);
+        $control->setSize(Size::COMPACT);
+        $control->setInvisible();
+
+        // Turnstile invisible mode is configured on the site key, the widget size stays
+        self::assertStringContainsString('data-size="compact"', $control->getControl()->render());
+    }
+
+    public function testSetSizeAfterSetInvisibleWithHcaptchaThrowsException(): void
     {
         $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
-        
+        $control->setInvisible();
+
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('hCaptcha integration does not support invisible mode');
-        
-        $control->setInvisible(true);
+        $this->expectExceptionMessage('Size of invisible hCaptcha cannot be changed');
+
+        $control->setSize(Size::COMPACT);
+    }
+
+    public function testSetInvisibleFalseWithHcaptchaRestoresSize(): void
+    {
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
+        $control->setInvisible();
+        $control->setInvisible(false);
+
+        self::assertStringContainsString('data-size="normal"', $control->getControl()->render());
     }
 
     public function testValidateCaptchaStaticMethodWithValidResponse(): void

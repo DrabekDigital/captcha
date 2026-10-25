@@ -5,7 +5,7 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 ## Features
 
 - ✅ **Cloudflare Turnstile** integration (visible, managed, invisible modes)
-- ✅ **hCaptcha** integration (visible mode)
+- ✅ **hCaptcha** integration (visible, invisible modes)
 - ✅ **PHP 8.3+** support
 - ✅ **Server-side validation**
 - ✅ **Flexible configuration**
@@ -41,7 +41,7 @@ captcha:
     secretKey: your-secret-key
     siteKey: your-site-key
     theme: auto              # light, dark, auto (optional)
-    size: normal             # normal, compact, flexible (Turnstile), invisible (hCaptcha) (optional)
+    size: normal             # normal, compact, flexible (Turnstile only) (optional)
 ```
 
 ### Configuration Options
@@ -53,7 +53,7 @@ captcha:
 | `siteKey` | string | **Yes** | - | Your site key from the captcha provider |
 | `verifyUrl` | string | No | - | Custom verification URL (uses default if not set) |
 | `theme` | string | No | `auto` | Theme: `light`, `dark`, or `auto` (hCaptcha does not support `auto` and uses its default `light` theme) |
-| `size` | string | No | `normal` | Size: `normal`, `compact`, `flexible` (Turnstile only) or `invisible` (hCaptcha only, executed by the bundled JS on form submission) |
+| `size` | string | No | `normal` | Size: `normal`, `compact` or `flexible` (Turnstile only) |
 
 ## Usage
 
@@ -105,8 +105,10 @@ $form->addCaptcha('captcha', 'Bot protection')
 $form->addCaptcha('captcha', 'Bot protection')
     ->setManagedMessages('Check will be performed on background', Html::el('em')->setHtml('Check has been performed successfully.'));
 
-// 4. Invisible captcha (only for Turnstile)
+// 4. Invisible captcha (Turnstile + hCaptcha)
 // The control + label will be hidden, the only thing that can be shown is required message.
+// Turnstile: choose the Invisible widget mode for the site key in the Cloudflare dashboard.
+// hCaptcha: rendered as invisible and executed by the bundled JS when the form is submitted.
 $form->addCaptcha('captcha', 'Bot protection')
     ->setInvisible(true);
 ```
