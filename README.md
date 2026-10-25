@@ -16,7 +16,7 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 - **PHP**: 8.3+
 - **Nette Forms**: 3.2+
-- **Extensions**: `curl` or `allow_url_fopen` for server-side verification
+- **Extensions**: `curl` (used by default) or `allow_url_fopen` for server-side verification
 
 
 
@@ -127,6 +127,15 @@ $validator = new CaptchaValidator('secret-key', CaptchaType::TURNSTILE);
 
 // Create control (validator is the first mandatory parameter)
 $captcha = new CaptchaControl($validator, 'Captcha', 'site-key', CaptchaType::TURNSTILE);
+```
+
+### Custom HTTP Client
+
+Server-side verification uses `curl` when available and falls back to PHP streams. To use your own transport (proxy, retries, PSR-18 client…), implement `DrabekDigital\Captcha\Http\HttpClient` and register it as a service – the validator gets it autowired:
+
+```neon
+services:
+    - App\Captcha\MyHttpClient
 ```
 
 ## Limitations

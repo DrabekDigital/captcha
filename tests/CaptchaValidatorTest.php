@@ -6,6 +6,9 @@ namespace DrabekDigital\Captcha\Tests;
 
 use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\Enums\CaptchaType;
+use DrabekDigital\Captcha\Http\CurlHttpClient;
+use DrabekDigital\Captcha\Http\HttpClient;
+use DrabekDigital\Captcha\Http\HttpException;
 use Nette\Http\IRequest;
 use PHPUnit\Framework\TestCase;
 
@@ -229,5 +232,88 @@ class CaptchaValidatorTest extends TestCase
         $responseWithoutSuccess = json_encode(['error' => 'something']);
         $result = $method->invoke($validator, $responseWithoutSuccess);
         self::assertFalse($result);
+    }
+
+    /**
+     * Create HTTP client returning the given body and recording the requests
+     *
+     * @param string|\Throwable $result
+     * @return HttpClient&object{requests: list<array{string, array<string, string>}>}
+     */
+    private function createHttpClient(string|\Throwable $result): HttpClient
+    {
+        return new class($result) implements HttpClient {
+            /** @var list<array{string, array<string, string>}> */
+            public array $requests = [];
+
+            public function __construct(private string|\Throwable $result)
+            {
+            }
+
+            public function post(string $url, array $data): string
+            {
+                $this->requests[] = [$url, $data];
+                if ($this->result instanceof \Throwable) {
+                    throw $this->result;
+                }
+                return $this->result;
+            }
+        };
+    }
+
+    public function testDefaultHttpClientIsCurl(): void
+    {
+        $validator = new CaptchaValidator($this->validSecretKey);
+
+        $property = (new \ReflectionClass($validator))->getProperty('httpClient');
+
+        self::assertInstanceOf(CurlHttpClient::class, $property->getValue($validator));
+    }
+
+    public function testVerifySendsRequestToVerificationService(): void
+    {
+        $httpRequest = self::createStub(IRequest::class);
+        $httpRequest->method('getRemoteAddress')->willReturn('10.0.0.1');
+        $client = $this->createHttpClient('{"success":true}');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::HCAPTCHA, null, $httpRequest, $client);
+
+        self::assertTrue($validator->verify('token'));
+        self::assertSame([
+            ['https://hcaptcha.com/siteverify', ['secret' => $this->validSecretKey, 'response' => 'token', 'remoteip' => '10.0.0.1']],
+        ], $client->requests);
+    }
+
+    public function testVerifyUsesCustomVerifyUrl(): void
+    {
+        $client = $this->createHttpClient('{"success":true}');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, 'https://example.com/verify', null, $client);
+
+        $validator->verify('token');
+
+        self::assertSame('https://example.com/verify', $client->requests[0][0]);
+    }
+
+    public function testVerifyWithUnsuccessfulResponse(): void
+    {
+        $client = $this->createHttpClient('{"success":false,"error-codes":["invalid-input-response"]}');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client);
+
+        self::assertFalse($validator->verify('token'));
+    }
+
+    public function testVerifyWithInvalidJsonResponse(): void
+    {
+        $client = $this->createHttpClient('<html>Bad gateway</html>');
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client);
+
+        self::assertFalse($validator->verify('token'));
+    }
+
+    public function testVerifyWhenServiceIsUnavailable(): void
+    {
+        $client = $this->createHttpClient(new HttpException('Failed to contact verification service'));
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client);
+
+        self::assertFalse($validator->verify('token'));
     }
 }

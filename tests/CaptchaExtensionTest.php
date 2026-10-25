@@ -10,6 +10,7 @@ use DrabekDigital\Captcha\DI\CaptchaExtension;
 use DrabekDigital\Captcha\Enums\CaptchaType;
 use DrabekDigital\Captcha\Enums\Size;
 use DrabekDigital\Captcha\Enums\Theme;
+use DrabekDigital\Captcha\Http\StreamHttpClient;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\Forms\Form;
@@ -208,6 +209,24 @@ class CaptchaExtensionTest extends TestCase
         /** @var CaptchaValidator $validator */
         $validator = $container->getService('captcha.validator');
         self::assertInstanceOf(CaptchaValidator::class, $validator); // @phpstan-ignore-line
+    }
+
+    public function testLoadConfigurationAutowiresHttpClient(): void
+    {
+        $config = [
+            'services' => [StreamHttpClient::class],
+            'captcha' => [
+                'secretKey' => 'test-secret-key',
+                'siteKey' => 'test-site-key'
+            ]
+        ];
+
+        $container = $this->createContainer($config);
+
+        /** @var CaptchaValidator $validator */
+        $validator = $container->getService('captcha.validator');
+        $property = (new \ReflectionClass($validator))->getProperty('httpClient');
+        self::assertInstanceOf(StreamHttpClient::class, $property->getValue($validator));
     }
 
     public function testLoadConfigurationWithHcaptcha(): void

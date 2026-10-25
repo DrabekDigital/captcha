@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace DrabekDigital\Captcha;
 
 use DrabekDigital\Captcha\Enums\CaptchaType;
+use DrabekDigital\Captcha\Http\CurlHttpClient;
+use DrabekDigital\Captcha\Http\HttpClient;
+use DrabekDigital\Captcha\Http\StreamHttpClient;
 use Nette\Http\IRequest;
 use Nette\Utils\Json;
 use Nette\Utils\JsonException;
@@ -22,12 +25,16 @@ class CaptchaValidator
         CaptchaType::HCAPTCHA->value => 'https://hcaptcha.com/siteverify',
     ];
 
+    private readonly HttpClient $httpClient;
+
     public function __construct(
         private readonly string $secretKey,
         private readonly CaptchaType $type = CaptchaType::TURNSTILE,
         private readonly ?string $verifyUrl = null,
-        private readonly ?IRequest $httpRequest = null
+        private readonly ?IRequest $httpRequest = null,
+        ?HttpClient $httpClient = null
     ) {
+        $this->httpClient = $httpClient ?? (extension_loaded('curl') ? new CurlHttpClient() : new StreamHttpClient());
     }
 
     /**
@@ -48,7 +55,7 @@ class CaptchaValidator
         $postData = $this->buildPostData($response, $remoteIp);
         
         try {
-            $result = $this->makeHttpRequest($verifyUrl, $postData);
+            $result = $this->httpClient->post($verifyUrl, $postData);
             return $this->parseResponse($result);
         } catch (\Exception $e) {
             error_log('Captcha verification failed: ' . $e->getMessage());
@@ -75,7 +82,7 @@ class CaptchaValidator
      *
      * @param string $response
      * @param string|null $remoteIp
-     * @return array<mixed>
+     * @return array<string, string>
      */
     private function buildPostData(string $response, ?string $remoteIp = null): array
     {
@@ -85,40 +92,14 @@ class CaptchaValidator
         ];
 
         // Add remote IP if available
+        if ($remoteIp === null || $remoteIp === '') {
+            $remoteIp = $this->httpRequest?->getRemoteAddress();
+        }
         if ($remoteIp !== null && $remoteIp !== '') {
             $data['remoteip'] = $remoteIp;
-        } elseif ($this->httpRequest !== null) {
-            $data['remoteip'] = $this->httpRequest->getRemoteAddress();
         }
 
         return $data;
-    }
-
-    /**
-     * Make HTTP request to verification endpoint
-     *
-     * @param string $url
-     * @param array<mixed> $postData
-     * @return string
-     */
-    private function makeHttpRequest(string $url, array $postData): string
-    {
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => 'Content-Type: application/x-www-form-urlencoded',
-                'content' => http_build_query($postData),
-                'timeout' => 10,
-            ],
-        ]);
-
-        $result = file_get_contents($url, false, $context);
-        
-        if ($result === false) {
-            throw new \RuntimeException('Failed to contact verification service');
-        }
-
-        return $result;
     }
 
     /**
