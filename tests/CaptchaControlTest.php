@@ -282,6 +282,30 @@ class CaptchaControlTest extends TestCase
         self::assertStringContainsString($this->siteKey, $html->render());
     }
 
+    public function testGetControlForHcaptchaOmitsUnsupportedAutoTheme(): void
+    {
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::HCAPTCHA);
+        $control->setTheme(Theme::AUTO);
+
+        self::assertStringNotContainsString('data-theme', $control->getControl()->render());
+    }
+
+    public function testGetControlForHcaptchaWithDarkTheme(): void
+    {
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::HCAPTCHA);
+        $control->setTheme(Theme::DARK);
+
+        self::assertStringContainsString('data-theme="dark"', $control->getControl()->render());
+    }
+
+    public function testGetControlForTurnstileKeepsAutoTheme(): void
+    {
+        $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::TURNSTILE);
+        $control->setTheme(Theme::AUTO);
+
+        self::assertStringContainsString('data-theme="auto"', $control->getControl()->render());
+    }
+
     public function testGetControlWithManagedMessages(): void
     {
         $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::TURNSTILE);
