@@ -248,7 +248,8 @@
     function validateTurnstile(container, form) {
         var responseInput = form.querySelector('input[name="cf-turnstile-response"]');
         if (!responseInput || !responseInput.value || responseInput.value.trim() === '') {
-            showValidationError(container.getAttribute('data-require-turnstile'), responseInput);
+            // The response input does not exist until the widget is rendered
+            showValidationError(container.getAttribute('data-require-turnstile'), responseInput || container);
             return false;
         }
 
