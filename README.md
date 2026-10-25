@@ -41,7 +41,7 @@ captcha:
     secretKey: your-secret-key
     siteKey: your-site-key
     theme: auto              # light, dark, auto (optional)
-    size: normal             # normal, compact (optional)
+    size: normal             # normal, compact, flexible (Turnstile), invisible (hCaptcha) (optional)
 ```
 
 ### Configuration Options
@@ -53,7 +53,7 @@ captcha:
 | `siteKey` | string | **Yes** | - | Your site key from the captcha provider |
 | `verifyUrl` | string | No | - | Custom verification URL (uses default if not set) |
 | `theme` | string | No | `auto` | Theme: `light`, `dark`, or `auto` |
-| `size` | string | No | `normal` | Size: `normal` or `compact` |
+| `size` | string | No | `normal` | Size: `normal`, `compact`, `flexible` (Turnstile only) or `invisible` (hCaptcha only, executed by the bundled JS on form submission) |
 
 ## Usage
 

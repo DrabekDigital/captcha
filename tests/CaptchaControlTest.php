@@ -118,6 +118,42 @@ class CaptchaControlTest extends TestCase
         self::assertSame($control, $result);
     }
 
+    public function testSetFlexibleSizeForTurnstile(): void
+    {
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE);
+        $control->setSize(Size::FLEXIBLE);
+
+        self::assertStringContainsString('data-size="flexible"', $control->getControl()->render());
+    }
+
+    public function testSetInvisibleSizeForHcaptcha(): void
+    {
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
+        $control->setSize(Size::INVISIBLE);
+
+        self::assertStringContainsString('data-size="invisible"', $control->getControl()->render());
+    }
+
+    public function testSetFlexibleSizeForHcaptchaThrowsException(): void
+    {
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Size "flexible" is not supported by hcaptcha');
+
+        $control->setSize(Size::FLEXIBLE);
+    }
+
+    public function testSetInvisibleSizeForTurnstileThrowsException(): void
+    {
+        $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Size "invisible" is not supported by turnstile');
+
+        $control->setSize(Size::INVISIBLE);
+    }
+
     public function testSetRequiredWithBooleanTrue(): void
     {
         $control = new CaptchaControl($this->validator);

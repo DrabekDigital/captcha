@@ -7,6 +7,9 @@ namespace DrabekDigital\Captcha\Tests;
 use DrabekDigital\Captcha\CaptchaControl;
 use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\DI\CaptchaExtension;
+use DrabekDigital\Captcha\Enums\CaptchaType;
+use DrabekDigital\Captcha\Enums\Size;
+use DrabekDigital\Captcha\Enums\Theme;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\Forms\Form;
@@ -132,6 +135,40 @@ class CaptchaExtensionTest extends TestCase
             // Any exception is acceptable for invalid input
             self::assertTrue(true, 'Exception thrown for invalid config: ' . $e->getMessage()); // @phpstan-ignore-line
         }
+    }
+
+    public function testGetConfigSchemaAcceptsAllEnumValues(): void
+    {
+        $schema = (new CaptchaExtension())->getConfigSchema();
+
+        $normalized = $schema->normalize([
+            'type' => 'hcaptcha',
+            'secretKey' => 'test-secret',
+            'siteKey' => 'test-site',
+            'theme' => 'dark',
+            'size' => 'invisible',
+        ], new \Nette\Schema\Context());
+        /** @var object{type: CaptchaType, theme: Theme, size: Size} $normalized */
+        $normalized = $schema->complete($normalized, new \Nette\Schema\Context());
+
+        self::assertSame(CaptchaType::HCAPTCHA, $normalized->type);
+        self::assertSame(Theme::DARK, $normalized->theme);
+        self::assertSame(Size::INVISIBLE, $normalized->size);
+    }
+
+    public function testLoadConfigurationWithUnsupportedSizeThrowsException(): void
+    {
+        $this->expectException(\Nette\DI\InvalidConfigurationException::class);
+        $this->expectExceptionMessage("Size 'flexible' is not supported by hcaptcha");
+
+        $this->createContainer([
+            'captcha' => [
+                'type' => 'hcaptcha',
+                'secretKey' => 'test-secret-key',
+                'siteKey' => 'test-site-key',
+                'size' => 'flexible',
+            ]
+        ]);
     }
 
     public function testGetConfigSchemaMissingRequiredField(): void

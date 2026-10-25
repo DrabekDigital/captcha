@@ -55,6 +55,10 @@ class CaptchaControl extends BaseControl
 
     public function setSize(Size $size): self
     {
+        if (!$size->isSupportedBy($this->type)) {
+            throw new \InvalidArgumentException(sprintf('Size "%s" is not supported by %s', $size->value, $this->type->value));
+        }
+
         $this->size = $size;
         return $this;
     }
