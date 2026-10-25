@@ -94,9 +94,10 @@
             return;
         }
 
-        // Find message elements
-        var pendingMessage = document.querySelector('.captcha-managed-invisible-message-pending');
-        var resolvedMessage = document.querySelector('.captcha-managed-invisible-message-resolved');
+        // Find message elements rendered next to this captcha (not elsewhere on the page)
+        var scope = turnstileElement.parentNode || form;
+        var pendingMessage = scope.querySelector('.captcha-managed-invisible-message-pending');
+        var resolvedMessage = scope.querySelector('.captcha-managed-invisible-message-resolved');
 
         if (!pendingMessage && !resolvedMessage) {
             return;
