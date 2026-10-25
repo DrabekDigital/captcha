@@ -16,7 +16,7 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 - **PHP**: 8.3+
 - **Nette Forms**: 3.2+
-- **Extensions**: `curl` or `allow_url_fopen` for server-side verification
+- **Extensions**: `curl` (used by default) or `allow_url_fopen` for server-side verification
 
 
 
@@ -127,6 +127,26 @@ $validator = new CaptchaValidator('secret-key', CaptchaType::TURNSTILE);
 
 // Create control (validator is the first mandatory parameter)
 $captcha = new CaptchaControl($validator, 'Captcha', 'site-key', CaptchaType::TURNSTILE);
+```
+
+### Custom HTTP Client
+
+Server-side verification uses `curl` when available and falls back to PHP streams (`allow_url_fopen`). To use your own HTTP client (proxy, retries, logging…), register any [PSR-18](https://www.php-fig.org/psr/psr-18/) client as a service, it is autowired into the validator. Clients that do not implement the [PSR-17](https://www.php-fig.org/psr/psr-17/) request and stream factories themselves need the factories registered too:
+
+```neon
+services:
+    # Symfony HttpClient implements the PSR-17 factories itself
+    - Symfony\Component\HttpClient\Psr18Client
+
+    # Guzzle needs the factories
+    - GuzzleHttp\Client
+    - GuzzleHttp\Psr7\HttpFactory
+```
+
+Without DI pass them to the constructor:
+
+```php
+$validator = new CaptchaValidator('secret-key', CaptchaType::TURNSTILE, httpClient: $client, requestFactory: $factory, streamFactory: $factory);
 ```
 
 ## Limitations

@@ -10,6 +10,8 @@ use DrabekDigital\Captcha\DI\CaptchaExtension;
 use DrabekDigital\Captcha\Enums\CaptchaType;
 use DrabekDigital\Captcha\Enums\Size;
 use DrabekDigital\Captcha\Enums\Theme;
+use DrabekDigital\Captcha\Http\Psr18Transport;
+use DrabekDigital\Captcha\Tests\Http\FakePsr18Client;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\Forms\Form;
@@ -208,6 +210,24 @@ class CaptchaExtensionTest extends TestCase
         /** @var CaptchaValidator $validator */
         $validator = $container->getService('captcha.validator');
         self::assertInstanceOf(CaptchaValidator::class, $validator); // @phpstan-ignore-line
+    }
+
+    public function testLoadConfigurationAutowiresPsr18Client(): void
+    {
+        $config = [
+            'services' => [FakePsr18Client::class],
+            'captcha' => [
+                'secretKey' => 'test-secret-key',
+                'siteKey' => 'test-site-key'
+            ]
+        ];
+
+        $container = $this->createContainer($config);
+
+        /** @var CaptchaValidator $validator */
+        $validator = $container->getService('captcha.validator');
+        $property = (new \ReflectionClass($validator))->getProperty('transport');
+        self::assertInstanceOf(Psr18Transport::class, $property->getValue($validator));
     }
 
     public function testLoadConfigurationWithHcaptcha(): void
