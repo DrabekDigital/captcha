@@ -6,9 +6,10 @@ namespace DrabekDigital\Captcha\Tests;
 
 use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\Enums\CaptchaType;
-use DrabekDigital\Captcha\Http\CurlHttpClient;
-use DrabekDigital\Captcha\Http\HttpClient;
-use DrabekDigital\Captcha\Http\StreamHttpClient;
+use DrabekDigital\Captcha\Http\CurlTransport;
+use DrabekDigital\Captcha\Http\StreamTransport;
+use DrabekDigital\Captcha\Http\Transport;
+use Nette\Utils\Json;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
@@ -28,46 +29,55 @@ class CaptchaValidatorE2eTest extends TestCase
     private const HCAPTCHA_SECRET = '0x0000000000000000000000000000000000000000';
     private const HCAPTCHA_PASS_TOKEN = '10000000-aaaa-bbbb-cccc-000000000001';
 
-    /**
-     * @return array<string, array{HttpClient}>
-     */
-    public static function clientsProvider(): array
+    public function testTurnstilePasses(): void
     {
-        return [
-            'curl' => [new CurlHttpClient()],
-            'stream' => [new StreamHttpClient()],
-        ];
-    }
-
-    #[DataProvider('clientsProvider')]
-    public function testTurnstilePasses(HttpClient $client): void
-    {
-        $validator = new CaptchaValidator(self::TURNSTILE_PASS_SECRET, CaptchaType::TURNSTILE, null, null, $client);
+        $validator = new CaptchaValidator(self::TURNSTILE_PASS_SECRET, CaptchaType::TURNSTILE);
 
         self::assertTrue($validator->verify(self::TURNSTILE_DUMMY_TOKEN));
     }
 
-    #[DataProvider('clientsProvider')]
-    public function testTurnstileFails(HttpClient $client): void
+    public function testTurnstileFails(): void
     {
-        $validator = new CaptchaValidator(self::TURNSTILE_FAIL_SECRET, CaptchaType::TURNSTILE, null, null, $client);
+        $validator = new CaptchaValidator(self::TURNSTILE_FAIL_SECRET, CaptchaType::TURNSTILE);
 
         self::assertFalse($validator->verify(self::TURNSTILE_DUMMY_TOKEN));
     }
 
-    #[DataProvider('clientsProvider')]
-    public function testHcaptchaPasses(HttpClient $client): void
+    public function testHcaptchaPasses(): void
     {
-        $validator = new CaptchaValidator(self::HCAPTCHA_SECRET, CaptchaType::HCAPTCHA, null, null, $client);
+        $validator = new CaptchaValidator(self::HCAPTCHA_SECRET, CaptchaType::HCAPTCHA);
 
         self::assertTrue($validator->verify(self::HCAPTCHA_PASS_TOKEN));
     }
 
-    #[DataProvider('clientsProvider')]
-    public function testHcaptchaFails(HttpClient $client): void
+    public function testHcaptchaFails(): void
     {
-        $validator = new CaptchaValidator(self::HCAPTCHA_SECRET, CaptchaType::HCAPTCHA, null, null, $client);
+        $validator = new CaptchaValidator(self::HCAPTCHA_SECRET, CaptchaType::HCAPTCHA);
 
         self::assertFalse($validator->verify('invalid-token'));
+    }
+
+    /**
+     * @return array<string, array{Transport}>
+     */
+    public static function transportsProvider(): array
+    {
+        return [
+            'curl' => [new CurlTransport()],
+            'stream' => [new StreamTransport()],
+        ];
+    }
+
+    #[DataProvider('transportsProvider')]
+    public function testTransportReachesVerificationService(Transport $transport): void
+    {
+        $response = $transport->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+            'secret' => self::TURNSTILE_PASS_SECRET,
+            'response' => self::TURNSTILE_DUMMY_TOKEN,
+        ]);
+
+        $data = Json::decode($response, forceArrays: true);
+        self::assertIsArray($data);
+        self::assertTrue($data['success'] ?? false);
     }
 }

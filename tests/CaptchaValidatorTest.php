@@ -6,11 +6,17 @@ namespace DrabekDigital\Captcha\Tests;
 
 use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\Enums\CaptchaType;
-use DrabekDigital\Captcha\Http\CurlHttpClient;
-use DrabekDigital\Captcha\Http\HttpClient;
-use DrabekDigital\Captcha\Http\HttpException;
+use DrabekDigital\Captcha\Http\CurlTransport;
+use DrabekDigital\Captcha\Tests\Http\FakePsr18Client;
 use Nette\Http\IRequest;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\Response;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Client\ClientExceptionInterface;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use ReflectionClass;
 
 class CaptchaValidatorTest extends TestCase
 {
@@ -84,7 +90,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('getVerifyUrl');
         
         $result = $method->invoke($validator);
@@ -99,7 +105,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::HCAPTCHA);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('getVerifyUrl');
         
         $result = $method->invoke($validator);
@@ -115,7 +121,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, $customUrl);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('getVerifyUrl');
         
         $result = $method->invoke($validator);
@@ -130,7 +136,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('buildPostData');
         
         $result = $method->invoke($validator, 'test-response');
@@ -148,7 +154,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('buildPostData');
         
         $result = $method->invoke($validator, 'test-response', '192.168.1.1');
@@ -170,7 +176,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, $httpRequest);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('buildPostData');
         
         $result = $method->invoke($validator, 'test-response');
@@ -189,7 +195,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('parseResponse');
         
         $validResponse = json_encode(['success' => true]);
@@ -209,7 +215,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('parseResponse');
         
         $this->expectException(\RuntimeException::class);
@@ -226,7 +232,7 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($validator);
+        $reflection = new ReflectionClass($validator);
         $method = $reflection->getMethod('parseResponse');
         
         $responseWithoutSuccess = json_encode(['error' => 'something']);
@@ -235,42 +241,26 @@ class CaptchaValidatorTest extends TestCase
     }
 
     /**
-     * Create HTTP client returning the given body and recording the requests
+     * Create PSR-18 client returning the given body (or throwing) and recording the requests
      *
      * @param string|\Throwable $result
-     * @return HttpClient&object{requests: list<array{string, array<string, string>}>}
+     * @return FakePsr18Client
      */
-    private function createHttpClient(string|\Throwable $result): HttpClient
+    private function createHttpClient(string|\Throwable $result): FakePsr18Client
     {
-        return new class($result) implements HttpClient {
-            /** @var list<array{string, array<string, string>}> */
-            public array $requests = [];
-
-            public function __construct(private string|\Throwable $result)
-            {
-            }
-
-            public function post(string $url, array $data): string
-            {
-                $this->requests[] = [$url, $data];
-                if ($this->result instanceof \Throwable) {
-                    throw $this->result;
-                }
-                return $this->result;
-            }
-        };
+        return new FakePsr18Client(is_string($result) ? new Response(200, [], $result) : $result);
     }
 
-    public function testDefaultHttpClientIsCurl(): void
+    public function testDefaultTransportIsCurl(): void
     {
         $validator = new CaptchaValidator($this->validSecretKey);
 
-        $property = (new \ReflectionClass($validator))->getProperty('httpClient');
+        $property = (new ReflectionClass($validator))->getProperty('transport');
 
-        self::assertInstanceOf(CurlHttpClient::class, $property->getValue($validator));
+        self::assertInstanceOf(CurlTransport::class, $property->getValue($validator));
     }
 
-    public function testVerifySendsRequestToVerificationService(): void
+    public function testVerifySendsRequestThroughPsr18Client(): void
     {
         $httpRequest = self::createStub(IRequest::class);
         $httpRequest->method('getRemoteAddress')->willReturn('10.0.0.1');
@@ -278,9 +268,43 @@ class CaptchaValidatorTest extends TestCase
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::HCAPTCHA, null, $httpRequest, $client);
 
         self::assertTrue($validator->verify('token'));
-        self::assertSame([
-            ['https://hcaptcha.com/siteverify', ['secret' => $this->validSecretKey, 'response' => 'token', 'remoteip' => '10.0.0.1']],
-        ], $client->requests);
+        self::assertCount(1, $client->requests);
+        self::assertSame('POST', $client->requests[0]->getMethod());
+        self::assertSame('https://hcaptcha.com/siteverify', (string) $client->requests[0]->getUri());
+        self::assertSame('application/x-www-form-urlencoded', $client->requests[0]->getHeaderLine('Content-Type'));
+        self::assertSame(
+            'secret=' . $this->validSecretKey . '&response=token&remoteip=10.0.0.1',
+            (string) $client->requests[0]->getBody()
+        );
+    }
+
+    public function testVerifyWithPsr18ClientAndSeparateFactories(): void
+    {
+        $response = new Response(200, [], '{"success":true}');
+        $client = new class($response) implements ClientInterface {
+            public function __construct(private ResponseInterface $response)
+            {
+            }
+
+            public function sendRequest(RequestInterface $request): ResponseInterface
+            {
+                return $this->response;
+            }
+        };
+        $factory = new Psr17Factory();
+        $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client, $factory, $factory);
+
+        self::assertTrue($validator->verify('token'));
+    }
+
+    public function testPsr18ClientWithoutFactoriesThrowsException(): void
+    {
+        $client = self::createStub(ClientInterface::class);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('PSR-18 HTTP client requires PSR-17 request and stream factories');
+
+        new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client);
     }
 
     public function testVerifyUsesCustomVerifyUrl(): void
@@ -290,7 +314,7 @@ class CaptchaValidatorTest extends TestCase
 
         $validator->verify('token');
 
-        self::assertSame('https://example.com/verify', $client->requests[0][0]);
+        self::assertSame('https://example.com/verify', (string) $client->requests[0]->getUri());
     }
 
     public function testVerifyWithUnsuccessfulResponse(): void
@@ -311,7 +335,8 @@ class CaptchaValidatorTest extends TestCase
 
     public function testVerifyWhenServiceIsUnavailable(): void
     {
-        $client = $this->createHttpClient(new HttpException('Failed to contact verification service'));
+        $client = $this->createHttpClient(new class('Connection refused') extends \RuntimeException implements ClientExceptionInterface {
+        });
         $validator = new CaptchaValidator($this->validSecretKey, CaptchaType::TURNSTILE, null, null, $client);
 
         self::assertFalse($validator->verify('token'));

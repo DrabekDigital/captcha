@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace DrabekDigital\Captcha\Http;
 
 /**
- * HTTP client based on PHP streams, requires allow_url_fopen (fallback without curl)
+ * Transport based on PHP streams, requires allow_url_fopen (fallback without curl)
+ *
+ * @internal
  */
-class StreamHttpClient implements HttpClient
+class StreamTransport implements Transport
 {
     public function __construct(
         private readonly int $timeout = 10

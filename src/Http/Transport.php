@@ -6,8 +6,10 @@ namespace DrabekDigital\Captcha\Http;
 
 /**
  * HTTP transport used to contact the captcha verification endpoint
+ *
+ * @internal inject a PSR-18 client into CaptchaValidator to use your own HTTP client
  */
-interface HttpClient
+interface Transport
 {
     /**
      * Send form-encoded POST request and return the response body

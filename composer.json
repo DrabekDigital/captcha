@@ -16,7 +16,9 @@
         "nette/http": "^3.3",
         "nette/php-generator": "^3.5.4 || ^4.0",
         "nette/schema": "^1.2.5",
-        "nette/utils": "^4.0.4"
+        "nette/utils": "^4.0.4",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0"
     },
     "suggest": {
         "ext-curl": "Used for server-side verification requests, falls back to PHP streams (allow_url_fopen) without it"
@@ -29,7 +31,8 @@
         "spaze/phpstan-disallowed-calls-nette": "^3.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/extension-installer": "^1.2",
-        "phpstan/phpstan-strict-rules": "^2.0"
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "nyholm/psr7": "^1.8"
     },
     "autoload": {
         "psr-4": {

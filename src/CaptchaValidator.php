@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace DrabekDigital\Captcha;
 
 use DrabekDigital\Captcha\Enums\CaptchaType;
-use DrabekDigital\Captcha\Http\CurlHttpClient;
-use DrabekDigital\Captcha\Http\HttpClient;
-use DrabekDigital\Captcha\Http\StreamHttpClient;
+use DrabekDigital\Captcha\Http\CurlTransport;
+use DrabekDigital\Captcha\Http\Psr18Transport;
+use DrabekDigital\Captcha\Http\StreamTransport;
+use DrabekDigital\Captcha\Http\Transport;
 use Nette\Http\IRequest;
 use Nette\Utils\Json;
 use Nette\Utils\JsonException;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 
 /**
  * Server-side validator for Captcha/Turnstile/hCaptcha responses
@@ -25,16 +29,27 @@ class CaptchaValidator
         CaptchaType::HCAPTCHA->value => 'https://hcaptcha.com/siteverify',
     ];
 
-    private readonly HttpClient $httpClient;
+    private readonly Transport $transport;
 
+    /**
+     * @param ClientInterface|null $httpClient PSR-18 client, curl (or PHP streams) is used when not set
+     * @param RequestFactoryInterface|null $requestFactory PSR-17 factory, required with a client not implementing it
+     * @param StreamFactoryInterface|null $streamFactory PSR-17 factory, required with a client not implementing it
+     */
     public function __construct(
         private readonly string $secretKey,
         private readonly CaptchaType $type = CaptchaType::TURNSTILE,
         private readonly ?string $verifyUrl = null,
         private readonly ?IRequest $httpRequest = null,
-        ?HttpClient $httpClient = null
+        ?ClientInterface $httpClient = null,
+        ?RequestFactoryInterface $requestFactory = null,
+        ?StreamFactoryInterface $streamFactory = null
     ) {
-        $this->httpClient = $httpClient ?? (extension_loaded('curl') ? new CurlHttpClient() : new StreamHttpClient());
+        $this->transport = match (true) {
+            $httpClient !== null => new Psr18Transport($httpClient, $requestFactory, $streamFactory),
+            extension_loaded('curl') => new CurlTransport(),
+            default => new StreamTransport(),
+        };
     }
 
     /**
@@ -55,7 +70,7 @@ class CaptchaValidator
         $postData = $this->buildPostData($response, $remoteIp);
         
         try {
-            $result = $this->httpClient->post($verifyUrl, $postData);
+            $result = $this->transport->post($verifyUrl, $postData);
             return $this->parseResponse($result);
         } catch (\Exception $e) {
             error_log('Captcha verification failed: ' . $e->getMessage());

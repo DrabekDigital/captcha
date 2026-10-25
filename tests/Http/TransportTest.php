@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace DrabekDigital\Captcha\Tests\Http;
 
-use DrabekDigital\Captcha\Http\CurlHttpClient;
-use DrabekDigital\Captcha\Http\HttpClient;
+use DrabekDigital\Captcha\Http\CurlTransport;
 use DrabekDigital\Captcha\Http\HttpException;
-use DrabekDigital\Captcha\Http\StreamHttpClient;
+use DrabekDigital\Captcha\Http\StreamTransport;
+use DrabekDigital\Captcha\Http\Transport;
 use Nette\Utils\Json;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class HttpClientTest extends TestCase
+class TransportTest extends TestCase
 {
     /** @var resource|null */
     private static $server = null;
@@ -59,18 +59,18 @@ class HttpClientTest extends TestCase
     }
 
     /**
-     * @return array<string, array{HttpClient}>
+     * @return array<string, array{Transport}>
      */
-    public static function clientsProvider(): array
+    public static function transportsProvider(): array
     {
         return [
-            'curl' => [new CurlHttpClient()],
-            'stream' => [new StreamHttpClient()],
+            'curl' => [new CurlTransport()],
+            'stream' => [new StreamTransport()],
         ];
     }
 
-    #[DataProvider('clientsProvider')]
-    public function testPostSendsFormEncodedData(HttpClient $client): void
+    #[DataProvider('transportsProvider')]
+    public function testPostSendsFormEncodedData(Transport $client): void
     {
         $response = Json::decode($client->post(self::$baseUrl . '/echo', ['secret' => 's', 'response' => 'r']), forceArrays: true);
 
@@ -81,8 +81,8 @@ class HttpClientTest extends TestCase
         ], $response);
     }
 
-    #[DataProvider('clientsProvider')]
-    public function testPostReturnsBodyOfClientError(HttpClient $client): void
+    #[DataProvider('transportsProvider')]
+    public function testPostReturnsBodyOfClientError(Transport $client): void
     {
         self::assertSame(
             '{"success":false,"error-codes":["invalid-input-secret"]}',
@@ -95,11 +95,11 @@ class HttpClientTest extends TestCase
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('HTTP 500');
 
-        (new CurlHttpClient())->post(self::$baseUrl . '/server-error', []);
+        (new CurlTransport())->post(self::$baseUrl . '/server-error', []);
     }
 
-    #[DataProvider('clientsProvider')]
-    public function testPostThrowsWhenServiceIsUnreachable(HttpClient $client): void
+    #[DataProvider('transportsProvider')]
+    public function testPostThrowsWhenServiceIsUnreachable(Transport $client): void
     {
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('Failed to contact verification service');

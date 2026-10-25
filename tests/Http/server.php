@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Router for the PHP built-in server used by HttpClientTest
+// Router for the PHP built-in server used by TransportTest
 $path = parse_url(is_string($_SERVER['REQUEST_URI'] ?? null) ? $_SERVER['REQUEST_URI'] : '/', PHP_URL_PATH);
 
 header('Content-Type: application/json');

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace DrabekDigital\Captcha\Http;
 
 /**
- * HTTP client based on the curl extension (default when available)
+ * Transport based on the curl extension (default when available)
+ *
+ * @internal
  */
-class CurlHttpClient implements HttpClient
+class CurlTransport implements Transport
 {
     public function __construct(
         private readonly int $timeout = 10

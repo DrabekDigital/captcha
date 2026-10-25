@@ -131,11 +131,22 @@ $captcha = new CaptchaControl($validator, 'Captcha', 'site-key', CaptchaType::TU
 
 ### Custom HTTP Client
 
-Server-side verification uses `curl` when available and falls back to PHP streams. To use your own transport (proxy, retries, PSR-18 client…), implement `DrabekDigital\Captcha\Http\HttpClient` and register it as a service – the validator gets it autowired:
+Server-side verification uses `curl` when available and falls back to PHP streams (`allow_url_fopen`). To use your own HTTP client (proxy, retries, logging…), register any [PSR-18](https://www.php-fig.org/psr/psr-18/) client as a service, it is autowired into the validator. Clients that do not implement the [PSR-17](https://www.php-fig.org/psr/psr-17/) request and stream factories themselves need the factories registered too:
 
 ```neon
 services:
-    - App\Captcha\MyHttpClient
+    # Symfony HttpClient implements the PSR-17 factories itself
+    - Symfony\Component\HttpClient\Psr18Client
+
+    # Guzzle needs the factories
+    - GuzzleHttp\Client
+    - GuzzleHttp\Psr7\HttpFactory
+```
+
+Without DI pass them to the constructor:
+
+```php
+$validator = new CaptchaValidator('secret-key', CaptchaType::TURNSTILE, httpClient: $client, requestFactory: $factory, streamFactory: $factory);
 ```
 
 ## Limitations
