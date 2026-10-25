@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace DrabekDigital\Captcha\Tests;
 
+use Closure;
 use DrabekDigital\Captcha\CaptchaControl;
 use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\Enums\CaptchaType;
 use DrabekDigital\Captcha\Enums\Size;
 use DrabekDigital\Captcha\Enums\Theme;
 use Nette\Forms\Form;
+use Nette\Http\FileUpload;
 use Nette\Utils\Html;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use Stringable;
 
 class CaptchaControlTest extends TestCase
@@ -79,7 +82,7 @@ class CaptchaControlTest extends TestCase
                         $this->httpData = $httpData;
                     }
                     
-                    public function getHttpData(?int $type = null, ?string $htmlName = null): \Nette\Http\FileUpload|array|string|null // @phpstan-ignore-line
+                    public function getHttpData(?int $type = null, ?string $htmlName = null): FileUpload|array|string|null // @phpstan-ignore-line
                     {
                         return $this->httpData; // @phpstan-ignore-line
                     }
@@ -359,7 +362,7 @@ class CaptchaControlTest extends TestCase
             public function getForm(bool $throw = true): ?Form // @phpstan-ignore-line
             {
                 return new class() extends Form {
-                    public function getHttpData(?int $type = null, ?string $htmlName = null): \Nette\Http\FileUpload|array|string|null // @phpstan-ignore-line
+                    public function getHttpData(?int $type = null, ?string $htmlName = null): FileUpload|array|string|null // @phpstan-ignore-line
                     {
                         return 'invalid-data'; // Non-array data
                     }
@@ -375,7 +378,7 @@ class CaptchaControlTest extends TestCase
         $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::TURNSTILE);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($control);
+        $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getCaptchaResponse');
         $method->setAccessible(true);
         
@@ -393,7 +396,7 @@ class CaptchaControlTest extends TestCase
         $control = new CaptchaControl($this->validator, null, $this->siteKey, CaptchaType::HCAPTCHA);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($control);
+        $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getCaptchaResponse');
         $method->setAccessible(true);
         
@@ -412,7 +415,7 @@ class CaptchaControlTest extends TestCase
         $control->setRequired('Custom message');
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($control);
+        $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getMessage');
         $method->setAccessible(true);
         
@@ -427,7 +430,7 @@ class CaptchaControlTest extends TestCase
         $control->setRequired($html);
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($control);
+        $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getMessage');
         $method->setAccessible(true);
         
@@ -441,7 +444,7 @@ class CaptchaControlTest extends TestCase
         $control->setRequired(true); // No custom message
         
         // Use reflection to test the private method
-        $reflection = new \ReflectionClass($control);
+        $reflection = new ReflectionClass($control);
         $method = $reflection->getMethod('getMessage');
         $method->setAccessible(true);
         
@@ -476,7 +479,7 @@ class CaptchaControlTest extends TestCase
     /**
      * Configurations which used to skip server-side validation
      *
-     * @return array<string, array{\Closure(CaptchaControl): mixed}>
+     * @return array<string, array{Closure(CaptchaControl): mixed}>
      */
     public static function configurationsProvider(): array
     {
@@ -489,10 +492,10 @@ class CaptchaControlTest extends TestCase
     }
 
     /**
-     * @param \Closure(CaptchaControl): mixed $configure
+     * @param Closure(CaptchaControl): mixed $configure
      */
     #[DataProvider('configurationsProvider')]
-    public function testFormWithoutResponseIsInvalid(\Closure $configure): void
+    public function testFormWithoutResponseIsInvalid(Closure $configure): void
     {
         $validator = $this->createMock(CaptchaValidator::class);
         $validator->expects(self::never())->method('verify');
@@ -509,10 +512,10 @@ class CaptchaControlTest extends TestCase
     }
 
     /**
-     * @param \Closure(CaptchaControl): mixed $configure
+     * @param Closure(CaptchaControl): mixed $configure
      */
     #[DataProvider('configurationsProvider')]
-    public function testFormWithInvalidResponseIsInvalid(\Closure $configure): void
+    public function testFormWithInvalidResponseIsInvalid(Closure $configure): void
     {
         $validator = $this->createMock(CaptchaValidator::class);
         $validator->expects(self::once())->method('verify')->with('fake-token')->willReturn(false);
@@ -528,10 +531,10 @@ class CaptchaControlTest extends TestCase
     }
 
     /**
-     * @param \Closure(CaptchaControl): mixed $configure
+     * @param Closure(CaptchaControl): mixed $configure
      */
     #[DataProvider('configurationsProvider')]
-    public function testFormWithValidResponseIsValid(\Closure $configure): void
+    public function testFormWithValidResponseIsValid(Closure $configure): void
     {
         $validator = $this->createMock(CaptchaValidator::class);
         $validator->expects(self::once())->method('verify')->with('valid-token')->willReturn(true);
