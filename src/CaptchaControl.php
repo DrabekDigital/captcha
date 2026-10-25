@@ -14,6 +14,8 @@ use Stringable;
  */
 class CaptchaControl extends BaseControl
 {
+    private const DEFAULT_MESSAGE = 'Please verify you are human.';
+
     private string $siteKey;
 
     private string $type;
@@ -21,8 +23,6 @@ class CaptchaControl extends BaseControl
     private string $theme = 'auto';
 
     private string $size = 'normal';
-
-    private bool $required = true;
 
     /*?string|HtmlStringable*/ private $message = null; // @phpstan-ignore-line
 
@@ -48,6 +48,8 @@ class CaptchaControl extends BaseControl
         $this->siteKey = $siteKey;
         $this->type = $type;
         $this->setOmitted();
+        // Captcha is always required, otherwise the form would pass without server-side verification
+        $this->setRequired();
     }
 
     /**
@@ -75,28 +77,37 @@ class CaptchaControl extends BaseControl
     }
 
     /**
-     * Set if captcha is required
+     * Set message shown when captcha is not solved (captcha is always required)
      *
      * @param string|\Stringable|Html|object|bool $value
      * @return static
      */
     public function setRequired(/*string|Stringable|Html|object|bool*/ $value = true)
     {
+        if ($value === false) {
+            throw new \InvalidArgumentException('Captcha cannot be optional, remove the control from the form instead.');
+        }
+
         if (is_string($value) || $value instanceof Stringable || $value instanceof Html) {
-            $this->required = true;
             $this->message = $value;
-        } elseif (is_bool($value)) {
-            $this->required = $value;
-        } else {
-            $this->required = true;
         }
-        
-        if ($this->required && !$this->requiredRuleAdded) {
-            $this->getRules()->setRequired($this->getMessage());
-            $this->addRule([$this, 'validateCaptcha'], $this->getMessage());
+
+        // The default message is translated by Nette on validation
+        $message = $this->message !== null ? $this->getMessage() : self::DEFAULT_MESSAGE;
+        $this->getRules()->setRequired($message);
+
+        if (!$this->requiredRuleAdded) {
+            $this->addRule([$this, 'validateCaptcha'], $message);
             $this->requiredRuleAdded = true;
+        } else {
+            // Rules::removeRule() is not available in nette/forms 3.0, update the message of the existing rule instead
+            foreach ($this->getRules() as $rule) {
+                if ($rule->validator === [$this, 'validateCaptcha']) {
+                    $rule->message = $message;
+                }
+            }
         }
-        
+
         return $this;
     }
 
@@ -182,9 +193,9 @@ class CaptchaControl extends BaseControl
         if ($this->message instanceof Stringable || $this->message instanceof Html) {
             return $this->message->__toString();
         }
-        $fallbackMessage = $this->translate('Please verify you are human.');
+        $fallbackMessage = $this->translate(self::DEFAULT_MESSAGE);
         if (!is_string($fallbackMessage)) {
-            $fallbackMessage = 'Please verify you are human.';
+            $fallbackMessage = self::DEFAULT_MESSAGE;
         }
         return is_string($this->message) ? $this->message : $fallbackMessage;
     }
@@ -273,10 +284,6 @@ class CaptchaControl extends BaseControl
      */
     public function isFilled(): bool
     {
-        if (!$this->required) {
-            return true;
-        }
-
         $form = $this->getForm();
         if (!$form instanceof Form) {
             return false;

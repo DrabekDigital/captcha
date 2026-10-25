@@ -24,7 +24,8 @@
         "spaze/phpstan-disallowed-calls-nette": "^3.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/extension-installer": "^1.2",
-        "phpstan/phpstan-strict-rules": "^2.0"
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "symfony/polyfill-php80": "^1.20"
     },
     "autoload": {
         "psr-4": {
