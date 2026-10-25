@@ -18,7 +18,8 @@
         "nette/schema": "^1.2.5",
         "nette/utils": "^4.0.4",
         "psr/http-client": "^1.0",
-        "psr/http-factory": "^1.0"
+        "psr/http-factory": "^1.0",
+        "psr/log": "^1.1 || ^2.0 || ^3.0"
     },
     "suggest": {
         "ext-curl": "Used for server-side verification requests, falls back to PHP streams (allow_url_fopen) without it"
