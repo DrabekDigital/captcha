@@ -1,15 +1,12 @@
-<?php 
+<?php
 
 declare(strict_types=1);
 
+use PhpCsFixer\Fixer\PhpTag\BlankLineAfterOpeningTagFixer;
 use Symplify\EasyCodingStandard\Config\ECSConfig;
-use Symplify\EasyCodingStandard\ValueObject\Set\SetList;
 
-return static function (ECSConfig $ecsConfig): void {
-    $ecsConfig->sets([SetList::PSR_12]);
-
-    $ecsConfig->skip([
-        PhpCsFixer\Fixer\PhpTag\BlankLineAfterOpeningTagFixer::class => null,
+return ECSConfig::configure()
+    ->withPreparedSets(psr12: true)
+    ->withSkip([
+        BlankLineAfterOpeningTagFixer::class,
     ]);
-
-};
