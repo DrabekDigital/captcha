@@ -6,7 +6,7 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 - ✅ **Cloudflare Turnstile** integration (visible, managed, invisible modes)
 - ✅ **hCaptcha** integration (visible mode)
-- ✅ **PHP 8+** support
+- ✅ **PHP 8.3+** support
 - ✅ **Server-side validation**
 - ✅ **Flexible configuration**
 - ✅ **Easy form integration**
@@ -14,8 +14,8 @@ A comprehensive Nette Forms extension for integrating **Cloudflare Turnstile** a
 
 ## Requirements
 
-- **PHP**: 8.2+
-- **Nette Framework**: 3.0+ (limited by Nette forms 3.2 as min version)
+- **PHP**: 8.3+
+- **Nette Forms**: 3.2+
 - **Extensions**: `curl` or `allow_url_fopen` for server-side verification
 
 
@@ -121,7 +121,7 @@ use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\Enums\CaptchaType;
 
 // Create validator manually
-$validator = new CaptchaValidator('secret-key', 'turnstile');
+$validator = new CaptchaValidator('secret-key', CaptchaType::TURNSTILE);
 
 // Create control (validator is the first mandatory parameter)
 $captcha = new CaptchaControl($validator, 'Captcha', 'site-key', CaptchaType::TURNSTILE);
