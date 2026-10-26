@@ -32,4 +32,19 @@ class CaptchaFrontendTest extends TestCase
 
         self::assertSame('<script>' . $script . '</script>', CaptchaFrontend::getLocalJavascriptStatic());
     }
+
+    public function testGetJavascriptStaticWithNonce(): void
+    {
+        self::assertSame(
+            '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer nonce=\'abc"123\'></script>',
+            CaptchaFrontend::getJavascriptStatic(CaptchaType::TURNSTILE, 'abc"123')
+        );
+    }
+
+    public function testGetLocalJavascriptStaticWithNonce(): void
+    {
+        $script = file_get_contents(CaptchaFrontend::getLocalJavascriptPath());
+
+        self::assertSame('<script nonce="abc123">' . $script . '</script>', CaptchaFrontend::getLocalJavascriptStatic('abc123'));
+    }
 }
