@@ -59,7 +59,13 @@ captcha:
 
 ### Basic Usage
 
-First do not forget to render relevant JS script include in your Latte templates:
+First do not forget to render relevant JS script include in your Latte templates. With Latte 3 and `nette/application` the extension registers a tag that renders the provider script for the configured type together with the validation script (including the CSP nonce, when used):
+
+```latte
+{captchaScripts}
+```
+
+Without it, include the scripts manually:
 
 ```latte
 {* This will include Turnstile or hCaptcha JS code *}
@@ -160,7 +166,7 @@ Without a logger, errors are written to the PHP error log.
 
 ### Content Security Policy
 
-All script helpers accept a CSP nonce:
+The `{captchaScripts}` tag adds the nonce automatically. The script helpers accept it as an argument:
 
 ```latte
 {DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::TURNSTILE, $nonce)|noescape}

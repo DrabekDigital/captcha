@@ -9,7 +9,11 @@ use DrabekDigital\Captcha\CaptchaValidator;
 use DrabekDigital\Captcha\Enums\CaptchaType;
 use DrabekDigital\Captcha\Enums\Size;
 use DrabekDigital\Captcha\Enums\Theme;
+use DrabekDigital\Captcha\Latte\CaptchaLatteExtension;
+use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Nette\DI\CompilerExtension;
+use Nette\DI\Definitions\FactoryDefinition;
+use Nette\DI\Definitions\Statement;
 use Nette\Forms\Container;
 use Nette\PhpGenerator\ClassType;
 use Nette\Schema\Context;
@@ -60,6 +64,24 @@ class CaptchaExtension extends CompilerExtension
                 'type' => $config->type,
                 'verifyUrl' => $config->verifyUrl,
             ]);
+    }
+
+    public function beforeCompile(): void
+    {
+        $builder = $this->getContainerBuilder();
+        $latteFactory = $builder->getByType(LatteFactory::class);
+
+        // Register {captchaScripts} into Latte 3 used by nette/application
+        if ($latteFactory === null || !class_exists(\Latte\Extension::class)) {
+            return;
+        }
+
+        /** @var object{type: CaptchaType} $config */
+        $config = $this->getConfig();
+        $definition = $builder->getDefinition($latteFactory);
+        if ($definition instanceof FactoryDefinition) {
+            $definition->getResultDefinition()->addSetup('addExtension', [new Statement(CaptchaLatteExtension::class, [$config->type])]);
+        }
     }
 
     public function afterCompile(ClassType $class): void
