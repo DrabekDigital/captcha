@@ -320,6 +320,15 @@ class CaptchaControlTest extends TestCase
         self::assertStringContainsString($this->siteKey, $html->render());
     }
 
+    public function testGetControlForTurnstileRendersCallbacks(): void
+    {
+        $rendered = (new CaptchaControl($this->validator, 'Test Label', $this->siteKey))->getControl()->render();
+
+        self::assertStringContainsString('data-callback="captchaTurnstileUpdate"', $rendered);
+        self::assertStringContainsString('data-expired-callback="captchaTurnstileUpdate"', $rendered);
+        self::assertStringContainsString('data-timeout-callback="captchaTurnstileUpdate"', $rendered);
+    }
+
     public function testGetControlForHcaptcha(): void
     {
         $control = new CaptchaControl($this->validator, 'Test Label', $this->siteKey, CaptchaType::HCAPTCHA);

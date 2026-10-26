@@ -1,318 +1,31 @@
 /**
  * Adds custom validation for hCaptcha and Turnstile
  */
-(function() {
+(() => {
     'use strict';
 
-    initCaptchaValidation();
-    initCaptchaDOMMonitor();
+    const TURNSTILE_SELECTOR = '.cf-turnstile';
+    const TURNSTILE_RESPONSE_SELECTOR = 'input[name="cf-turnstile-response"]';
+    const HCAPTCHA_RESPONSE_SELECTOR = 'textarea[name="h-captcha-response"]';
+    const DEFAULT_MESSAGE = 'Please complete the captcha verification.';
 
-    function initCaptchaValidation() {
+    let validationInitialized = false;
+    let monitorInitialized = false;
 
-        // Hook into form validation
-        document.addEventListener('submit', function(e) {
-            var form = e.target;
-            if (!form.tagName || form.tagName.toLowerCase() !== 'form') {
-                return;
-            }
+    const nonEmpty = (value) => (value && value.trim() !== '' ? value : null);
 
-            // Check for hCaptcha validation requirements
-            var hcaptchaContainers = form.querySelectorAll('[data-require-hcaptcha]');
-            for (var i = 0; i < hcaptchaContainers.length; i++) {
-                // Invisible hCaptcha has to be executed, the form is submitted again once solved
-                if (hcaptchaContainers[i].getAttribute('data-size') === 'invisible' && !getHcaptchaResponse(hcaptchaContainers[i])) {
-                    e.preventDefault();
-                    executeInvisibleHcaptcha(hcaptchaContainers[i], form, e.submitter);
-                    return false;
-                }
-                if (!validateHcaptcha(hcaptchaContainers[i])) {
-                    e.preventDefault();
-                    return false;
-                }
-            }
+    const getTurnstileResponse = (container) => {
+        // The input is rendered inside the widget, older widgets may place it elsewhere in the form
+        const input = container.querySelector(TURNSTILE_RESPONSE_SELECTOR)
+            ?? container.closest('form')?.querySelector(TURNSTILE_RESPONSE_SELECTOR);
+        return nonEmpty(input?.value);
+    };
 
-            // Check for Turnstile validation requirements
-            var turnstileContainers = form.querySelectorAll('[data-require-turnstile]');
-            for (var i = 0; i < turnstileContainers.length; i++) {
-                if (!validateTurnstile(turnstileContainers[i], form)) {
-                    e.preventDefault();
-                    return false;
-                }
-            }
-        });
-    }
+    const getHcaptchaResponse = (container) => nonEmpty(container.querySelector(HCAPTCHA_RESPONSE_SELECTOR)?.value);
 
-    function initCaptchaDOMMonitor() {
-        function startMonitoring() {
-            // Initial check for existing cf-turnstile elements
-            var turnstileElements = document.querySelectorAll('[class*="cf-turnstile"]');
-            for (var i = 0; i < turnstileElements.length; i++) {
-                setupTurnstileMonitor(turnstileElements[i]);
-            }
+    const showNetteStyleModal = (message) => {
+        const dialog = document.createElement('dialog');
 
-            // Monitor for dynamically added cf-turnstile elements
-            var observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    mutation.addedNodes.forEach(function(node) {
-                        if (node.nodeType === 1) { // Element node
-                            // Check if the added node itself is a cf-turnstile element
-                            if (node.className && node.className.indexOf('cf-turnstile') !== -1) {
-                                setupTurnstileMonitor(node);
-                            }
-                            // Check if the added node contains cf-turnstile elements
-                            var turnstileChildren = node.querySelectorAll ? node.querySelectorAll('[class*="cf-turnstile"]') : [];
-                            for (var i = 0; i < turnstileChildren.length; i++) {
-                                setupTurnstileMonitor(turnstileChildren[i]);
-                            }
-                        }
-                    });
-                });
-            });
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        // Wait for DOM to be ready
-        if (document.body) {
-            startMonitoring();
-        } else if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', startMonitoring);
-        } else {
-            // Document is already loaded but body might not be available yet
-            setTimeout(startMonitoring, 0);
-        }
-    }
-
-    function setupTurnstileMonitor(turnstileElement) {
-        // Check if there's an iframe under cf-turnstile
-        var iframe = turnstileElement.querySelector('iframe');
-        if (iframe) {
-            // Visible captcha - no action needed
-            return;
-        }
-
-        // No iframe found - likely invisible captcha, setup monitoring
-        var form = turnstileElement.closest('form');
-        if (!form) {
-            return;
-        }
-
-        // Find message elements rendered next to this captcha (not elsewhere on the page)
-        var scope = turnstileElement.parentNode || form;
-        var pendingMessage = scope.querySelector('.captcha-managed-invisible-message-pending');
-        var resolvedMessage = scope.querySelector('.captcha-managed-invisible-message-resolved');
-
-        if (!pendingMessage && !resolvedMessage) {
-            return;
-        }
-
-        var responseInput = form.querySelector('input[name="cf-turnstile-response"]');
-        
-        if (!responseInput) {
-            // Show pending message initially
-            updateMessageVisibility('', pendingMessage, resolvedMessage);
-            
-            // Monitor for the response input to be added
-            var inputObserver = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    mutation.addedNodes.forEach(function(node) {
-                        if (node.nodeType === 1) { // Element node
-                            var foundInput = null;
-                            
-                            // Check if the added node is the response input
-                            if (node.name === 'cf-turnstile-response') {
-                                foundInput = node;
-                            }
-                            // Check if the added node contains the response input
-                            else if (node.querySelectorAll) {
-                                foundInput = node.querySelector('input[name="cf-turnstile-response"]');
-                            }
-                            
-                            if (foundInput) {
-                                inputObserver.disconnect(); // Stop looking for the input
-                                startResponseMonitoring(foundInput, pendingMessage, resolvedMessage);
-                            }
-                        }
-                    });
-                });
-            });
-            
-            inputObserver.observe(form, {
-                childList: true,
-                subtree: true
-            });
-            
-            return;
-        }
-        
-        startResponseMonitoring(responseInput, pendingMessage, resolvedMessage);
-    }
-
-    function startResponseMonitoring(responseInput, pendingMessage, resolvedMessage) {
-        // Initial state check
-        updateMessageVisibility(responseInput.value, pendingMessage, resolvedMessage);
-
-        // Monitor response input changes
-        var observer = new MutationObserver(function() {
-            updateMessageVisibility(responseInput.value, pendingMessage, resolvedMessage);
-        });
-
-        // Watch for attribute changes on the input
-        observer.observe(responseInput, {
-            attributes: true,
-            attributeFilter: ['value']
-        });
-
-        // Also listen for input events
-        responseInput.addEventListener('input', function() {
-            updateMessageVisibility(responseInput.value, pendingMessage, resolvedMessage);
-        });
-
-        // Poll for value changes (in case value is set programmatically)
-        var lastValue = responseInput.value;
-        var pollInterval = setInterval(function() {
-            if (responseInput.value !== lastValue) {
-                lastValue = responseInput.value;
-                updateMessageVisibility(responseInput.value, pendingMessage, resolvedMessage);
-            }
-            
-            // Stop polling if element is removed from DOM
-            if (!document.contains(responseInput)) {
-                clearInterval(pollInterval);
-            }
-        }, 500);
-    }
-
-    function updateMessageVisibility(responseValue, pendingMessage, resolvedMessage) {
-        var hasResponse = responseValue && responseValue.trim() !== '';
-
-        if (pendingMessage) {
-            pendingMessage.style.display = hasResponse ? 'none' : '';
-        }
-
-        if (resolvedMessage) {
-            resolvedMessage.style.display = hasResponse ? '' : 'none';
-        }
-    }
-
-    function findRequireHcaptchaContainer(elem) {
-        // Look for the container with data-require-hcaptcha attribute
-        var current = elem;
-        while (current && current !== document) {
-            if (current.hasAttribute && current.hasAttribute('data-require-hcaptcha')) {
-                return current;
-            }
-            current = current.parentNode;
-        }
-        
-        // If not found in parents, look in the form
-        var form = elem.form || elem.closest('form');
-        if (form) {
-            return form.querySelector('[data-require-hcaptcha]');
-        }
-        
-        return null;
-    }
-
-    function findRequireTurnstileContainer(elem) {
-        // Look for the container with data-require-turnstile attribute
-        var current = elem;
-        while (current && current !== document) {
-            if (current.hasAttribute && current.hasAttribute('data-require-turnstile')) {
-                return current;
-            }
-            current = current.parentNode;
-        }
-        
-        // If not found in parents, look in the form
-        var form = elem.form || elem.closest('form');
-        if (form) {
-            return form.querySelector('[data-require-turnstile]');
-        }
-        
-        return null;
-    }
-
-    function getHcaptchaResponse(container) {
-        var iframe = container.querySelector('iframe[src*="hcaptcha.com"]');
-        var response = iframe ? iframe.getAttribute('data-hcaptcha-response') : null;
-        return response && response.trim() !== '' ? response : null;
-    }
-
-    function executeInvisibleHcaptcha(container, form, submitter) {
-        var message = container.getAttribute('data-require-hcaptcha');
-        var iframe = container.querySelector('iframe[data-hcaptcha-widget-id]');
-        if (typeof hcaptcha === 'undefined' || !iframe) {
-            showValidationError(message, container);
-            return;
-        }
-
-        hcaptcha.execute(iframe.getAttribute('data-hcaptcha-widget-id'), { async: true }).then(function() {
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit(submitter || undefined);
-            } else {
-                form.submit();
-            }
-        }, function() {
-            showValidationError(message, container);
-        });
-    }
-
-    function validateHcaptcha(container) {
-        var iframe = container.querySelector('iframe[src*="hcaptcha.com"]');
-        if (!iframe) {
-            showValidationError(container.getAttribute('data-require-hcaptcha'), container);
-            return false;
-        }
-
-        var response = iframe.getAttribute('data-hcaptcha-response');
-        if (!response || response.trim() === '') {
-            showValidationError(container.getAttribute('data-require-hcaptcha'), iframe);
-            return false;
-        }
-
-        return true;
-    }
-
-    function validateTurnstile(container, form) {
-        var responseInput = form.querySelector('input[name="cf-turnstile-response"]');
-        if (!responseInput || !responseInput.value || responseInput.value.trim() === '') {
-            // The response input does not exist until the widget is rendered
-            showValidationError(container.getAttribute('data-require-turnstile'), responseInput || container);
-            return false;
-        }
-
-        return true;
-    }
-
-    function showValidationError(message, element) {
-        var errorMessage = message && message.trim() !== '' ? message : 'Please complete the captcha verification.';
-        
-        // Try to use Nette's modal functionality if available
-        if (typeof Nette !== 'undefined' && typeof Nette.showFormErrors === 'function') {
-            // Try using Nette.showFormErrors if available
-            try {
-                Nette.showFormErrors(null, [{ message: errorMessage, element: element }]);
-                return;
-            } catch (e) {
-                console.error('Error showing validation error:', e); // Fallthrough to custom handling
-            }
-        }
-        // Create a Nette-style modal if Nette is loaded but modal isn't accessible
-        if (typeof Nette !== 'undefined' || document.querySelector('script[src*="nette-forms"]')) {
-            showNetteStyleModal(errorMessage);
-        } else {
-            // Fallback to browser alert
-            alert(errorMessage);
-        }
-    }
-
-    function showNetteStyleModal(message) {
-        var dialog = document.createElement('dialog');
-        
         // Check if browser supports dialog element
         if (!dialog.showModal) {
             alert(message);
@@ -320,30 +33,187 @@
         }
 
         // Create modal styling (same as Nette's modal)
-        var style = document.createElement('style');
+        const style = document.createElement('style');
         style.innerText = '.netteFormsModal { text-align: center; margin: auto; border: 2px solid black; padding: 1rem } .netteFormsModal button { padding: .1em 2em }';
 
-        // Create OK button
-        var button = document.createElement('button');
+        const button = document.createElement('button');
         button.innerText = 'OK';
-        button.onclick = function() {
-            dialog.remove();
-        };
+        button.onclick = () => dialog.remove();
 
-        // Setup dialog
         dialog.setAttribute('class', 'netteFormsModal');
         dialog.innerText = message + '\n\n';
         dialog.append(style, button);
         document.body.append(dialog);
         dialog.showModal();
-        
+
         // Focus the button for better accessibility
         button.focus();
+    };
+
+    const showValidationError = (message, element) => {
+        const errorMessage = nonEmpty(message) ?? DEFAULT_MESSAGE;
+
+        // Use Nette's error reporting if available
+        if (typeof Nette !== 'undefined' && typeof Nette.showFormErrors === 'function') {
+            try {
+                Nette.showFormErrors(element.closest('form'), [{ message: errorMessage, element }]);
+                return;
+            } catch (e) {
+                console.error('Error showing validation error:', e); // Fallthrough to custom handling
+            }
+        }
+
+        // Create a Nette-style modal if Nette is loaded but its error reporting isn't usable
+        if (typeof Nette !== 'undefined' || document.querySelector('script[src*="nette-forms"]')) {
+            showNetteStyleModal(errorMessage);
+        } else {
+            alert(errorMessage);
+        }
+    };
+
+    const executeInvisibleHcaptcha = (container, form, submitter) => {
+        const message = container.getAttribute('data-require-hcaptcha');
+        const widgetId = container.getAttribute('data-hcaptcha-widget-id')
+            ?? container.querySelector('iframe[data-hcaptcha-widget-id]')?.getAttribute('data-hcaptcha-widget-id');
+        if (typeof hcaptcha === 'undefined' || !widgetId) {
+            showValidationError(message, container);
+            return;
+        }
+
+        // The form is submitted again with the original submitter once solved
+        hcaptcha.execute(widgetId, { async: true }).then(
+            () => (typeof form.requestSubmit === 'function' ? form.requestSubmit(submitter ?? undefined) : form.submit()),
+            () => showValidationError(message, container)
+        );
+    };
+
+    /**
+     * Returns false when the form must not be submitted yet
+     */
+    const validateCaptchas = (form, submitter) => {
+        for (const container of form.querySelectorAll('[data-require-hcaptcha]')) {
+            if (getHcaptchaResponse(container)) {
+                continue;
+            }
+            if (container.getAttribute('data-size') === 'invisible') {
+                executeInvisibleHcaptcha(container, form, submitter);
+            } else {
+                showValidationError(container.getAttribute('data-require-hcaptcha'), container.querySelector('iframe') ?? container);
+            }
+            return false;
+        }
+
+        for (const container of form.querySelectorAll('[data-require-turnstile]')) {
+            if (!getTurnstileResponse(container)) {
+                showValidationError(container.getAttribute('data-require-turnstile'), container);
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    function initCaptchaValidation() {
+        if (validationInitialized) {
+            return;
+        }
+        validationInitialized = true;
+
+        // Capture phase runs before submit handlers on the form itself, e.g. AJAX submission by Naja
+        document.addEventListener('submit', (event) => {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) {
+                return;
+            }
+
+            // Buttons without validation (Nette validation scope) skip the captcha on the server too
+            if (event.submitter?.hasAttribute('formnovalidate')) {
+                return;
+            }
+
+            if (!validateCaptchas(form, event.submitter)) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
     }
 
-    // Export for manual initialization if needed
-    if (typeof window !== 'undefined') {
-        window.initCaptchaValidation = initCaptchaValidation;
-        window.initCaptchaDOMMonitor = initCaptchaDOMMonitor;
+    const toggle = (element, visible) => {
+        if (element) {
+            element.style.display = visible ? '' : 'none';
+        }
+    };
+
+    /**
+     * Shows managed messages of invisible Turnstile according to its state
+     */
+    const updateManagedMessages = (widget) => {
+        // Messages are rendered next to the widget
+        const scope = widget.parentNode;
+        const pendingMessage = scope?.querySelector('.captcha-managed-invisible-message-pending');
+        const resolvedMessage = scope?.querySelector('.captcha-managed-invisible-message-resolved');
+        if (!pendingMessage && !resolvedMessage) {
+            return;
+        }
+
+        // Visible captcha shows its own state
+        if (widget.querySelector('iframe')) {
+            toggle(pendingMessage, false);
+            toggle(resolvedMessage, false);
+            return;
+        }
+
+        const solved = getTurnstileResponse(widget) !== null;
+        toggle(pendingMessage, !solved);
+        toggle(resolvedMessage, solved);
+    };
+
+    const updateAllManagedMessages = () => document.querySelectorAll(TURNSTILE_SELECTOR).forEach(updateManagedMessages);
+
+    function initCaptchaDOMMonitor() {
+        if (monitorInitialized) {
+            return;
+        }
+        monitorInitialized = true;
+
+        // Called by Turnstile through data-callback, data-expired-callback and data-timeout-callback
+        window.captchaTurnstileUpdate = updateAllManagedMessages;
+
+        const startMonitoring = () => {
+            updateAllManagedMessages();
+
+            // Widgets added later (e.g. AJAX snippets) and widgets rendered by Turnstile
+            new MutationObserver((mutations) => {
+                const widgets = new Set();
+                for (const mutation of mutations) {
+                    const target = mutation.target instanceof Element ? mutation.target.closest(TURNSTILE_SELECTOR) : null;
+                    if (target) {
+                        widgets.add(target);
+                    }
+                    for (const node of mutation.addedNodes) {
+                        if (node instanceof Element) {
+                            if (node.matches(TURNSTILE_SELECTOR)) {
+                                widgets.add(node);
+                            }
+                            node.querySelectorAll(TURNSTILE_SELECTOR).forEach((widget) => widgets.add(widget));
+                        }
+                    }
+                }
+                widgets.forEach(updateManagedMessages);
+            }).observe(document.body, { childList: true, subtree: true });
+        };
+
+        if (document.body) {
+            startMonitoring();
+        } else {
+            document.addEventListener('DOMContentLoaded', startMonitoring);
+        }
     }
-})(); 
+
+    initCaptchaValidation();
+    initCaptchaDOMMonitor();
+
+    // Export for manual initialization if needed
+    window.initCaptchaValidation = initCaptchaValidation;
+    window.initCaptchaDOMMonitor = initCaptchaDOMMonitor;
+})();
