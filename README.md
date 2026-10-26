@@ -158,6 +158,22 @@ When a PSR-3 `Psr\Log\LoggerInterface` service is registered (e.g. Monolog, or T
 
 Without a logger, errors are written to the PHP error log.
 
+### Content Security Policy
+
+All script helpers accept a CSP nonce:
+
+```latte
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::TURNSTILE, $nonce)|noescape}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getLocalJavascriptStatic($nonce)|noescape}
+```
+
+Instead of the inline validation script you can serve `CaptchaFrontend::getLocalJavascriptPath()` as a static file (e.g. copy it to `www/` during deploy) and allow it by `script-src 'self'`.
+
+The providers need these sources in your policy:
+
+- Turnstile: `script-src` and `frame-src` `https://challenges.cloudflare.com`
+- hCaptcha: `script-src`, `frame-src`, `style-src` and `connect-src` `https://hcaptcha.com https://*.hcaptcha.com`
+
 ## Limitations
 
 - Only implicit rendering support for both providers (primarily due to reliability).
