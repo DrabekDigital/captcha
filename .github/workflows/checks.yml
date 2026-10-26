@@ -29,3 +29,20 @@ jobs:
         run: composer install
       - name: Check static analysis and code check
         run: composer all
+
+  e2e:
+    # Calls the real Turnstile and hCaptcha verification services with their testing keys
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP Action
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+      - name: Install dependencies
+        run: composer install
+      - name: Run e2e tests
+        run: composer e2e
