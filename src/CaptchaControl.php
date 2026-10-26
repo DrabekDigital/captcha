@@ -207,6 +207,10 @@ class CaptchaControl extends BaseControl
                 'data-theme' => $this->theme->value,
                 'data-size' => $this->size->value,
                 'data-require-turnstile' => $this->getMessage(true),
+                // Defined by the bundled captcha-validation.js to update managed messages
+                'data-callback' => 'captchaTurnstileUpdate',
+                'data-expired-callback' => 'captchaTurnstileUpdate',
+                'data-timeout-callback' => 'captchaTurnstileUpdate',
             ]),
             CaptchaType::HCAPTCHA => $el->addAttributes([
                 'class' => 'h-captcha',
