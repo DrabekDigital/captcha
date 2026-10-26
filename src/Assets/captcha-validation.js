@@ -21,7 +21,12 @@
         return nonEmpty(input?.value);
     };
 
-    const getHcaptchaResponse = (container) => nonEmpty(container.querySelector(HCAPTCHA_RESPONSE_SELECTOR)?.value);
+    const getHcaptchaResponse = (container) => {
+        // The textarea is rendered inside the widget, look in the form as Turnstile does when it is placed elsewhere
+        const textarea = container.querySelector(HCAPTCHA_RESPONSE_SELECTOR)
+            ?? container.closest('form')?.querySelector(HCAPTCHA_RESPONSE_SELECTOR);
+        return nonEmpty(textarea?.value);
+    };
 
     const showNetteStyleModal = (message) => {
         const dialog = document.createElement('dialog');
@@ -153,13 +158,6 @@
         const pendingMessage = scope?.querySelector('.captcha-managed-invisible-message-pending');
         const resolvedMessage = scope?.querySelector('.captcha-managed-invisible-message-resolved');
         if (!pendingMessage && !resolvedMessage) {
-            return;
-        }
-
-        // Visible captcha shows its own state
-        if (widget.querySelector('iframe')) {
-            toggle(pendingMessage, false);
-            toggle(resolvedMessage, false);
             return;
         }
 
