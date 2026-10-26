@@ -15,9 +15,14 @@
     </div>
 </div>
 
-{* Include captcha JavaScript - this is important! *}
+{* Include captcha JavaScript (provider script for the configured type + form validation) - this is important! *}
+{captchaScripts}
+
+{* Alternative without the Latte extension: *}
+{*
 {DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::TURNSTILE)|noescape}
-{DrabekDigital\Captcha\Assets\CaptchaFrontend::getJavascriptStatic(\DrabekDigital\Captcha\Enums\CaptchaType::HCAPTCHA)|noescape}
+{DrabekDigital\Captcha\Assets\CaptchaFrontend::getLocalJavascriptStatic()|noescape}
+*}
 
 {* Alternative manual approach: *}
 {* 
@@ -26,10 +31,7 @@
 *}
 {/block}
 
-{* Include form validation and managed state messages handler *}
-{DrabekDigital\Captcha\Assets\CaptchaFrontend::getLocalJavascriptStatic()|noescape}
-
-{* Alternative manual approach: *}
+{* Form validation script can also be served as a static file (see CaptchaFrontend::getLocalJavascriptPath()): *}
 {* 
     <script src="{$basePath}/assets/captcha-validation.js"></script>
 *}
